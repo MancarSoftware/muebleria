@@ -11,6 +11,15 @@ const blankProduct = (): ProductDraft => ({ slug: '', name: '', category: catalo
 const toDraft = (product: Product): ProductDraft => ({ ...product, status: product.status ?? 'draft', inventoryStatus: product.inventoryStatus ?? 'made_to_order', leadTimeDays: product.leadTimeDays ?? null, sortOrder: product.sortOrder ?? 0 });
 const listValue = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
 const toSlug = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-EC').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const errorMessage = (error: unknown, action: 'save' | 'image' | 'seed') => {
+  const detail = error as { code?: string; message?: string };
+  if (detail.code === '23505') return 'Ya existe una pieza con esa URL. Cambia el campo “URL del producto” y vuelve a guardar.';
+  if (detail.code === '42501') return 'Tu cuenta no tiene permiso para esta acción. Verifica que tenga rol admin o editor en Supabase.';
+  if (detail.message?.toLowerCase().includes('file size')) return 'La imagen supera el límite de 10 MB. Reduce su tamaño e inténtalo de nuevo.';
+  if (action === 'image') return 'La pieza se guardó, pero no pudimos subir una de las imágenes. Prueba con JPG, PNG o WebP de menos de 10 MB.';
+  if (action === 'seed') return 'No pudimos cargar las piezas de demostración. Revisa los permisos de Supabase y vuelve a intentarlo.';
+  return 'No pudimos guardar el producto. Inténtalo de nuevo o revisa los permisos de Supabase.';
+};
 
 export function Admin() {
   const [sessionReady, setSessionReady] = useState(false);
@@ -83,23 +92,32 @@ export function Admin() {
       setNotice(result.imagesWithFallback
         ? `Cargamos ${result.created} piezas. ${result.imagesWithFallback} usan una imagen de respaldo y puedes reemplazarla desde el editor.`
         : `Cargamos ${result.created} piezas y sus imágenes en el catálogo de prueba.`);
-    } catch {
-      setNotice('No pudimos cargar las piezas de demostración. Revisa los permisos de Supabase y vuelve a intentarlo.');
+    } catch (error) {
+      setNotice(errorMessage(error, 'seed'));
     } finally { setLoading(false); }
   };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selected.name || !selected.slug || !selected.description || !selected.dimensions) { setNotice('Completa nombre, URL, descripción y dimensiones antes de guardar.'); return; }
+    if (!selected.id && products.some((product) => product.slug === selected.slug)) { setNotice('Ya existe una pieza con esa URL. Cambia el campo “URL del producto” y vuelve a guardar.'); return; }
     setLoading(true); setNotice('');
     try {
       const id = await saveProduct(selected);
-      await uploadProductImages(id, files);
+      try {
+        await uploadProductImages(id, files);
+      } catch (error) {
+        const nextProducts = await loadProducts();
+        const savedProduct = nextProducts.find((product) => product.id === id);
+        setSelected(savedProduct ? toDraft(savedProduct) : (current) => ({ ...current, id })); setFiles([]);
+        setNotice(errorMessage(error, 'image'));
+        return;
+      }
       const nextProducts = await loadProducts();
       const savedProduct = nextProducts.find((product) => product.id === id);
       setSelected(savedProduct ? toDraft(savedProduct) : (current) => ({ ...current, id })); setFiles([]);
       setNotice(selected.status === 'published' ? 'Producto publicado. Ya aparece en el catálogo público.' : 'Borrador guardado. Solo tú puedes verlo aquí.');
-    } catch { setNotice('No pudimos guardar el producto. Revisa los permisos de Supabase y vuelve a intentarlo.'); }
+    } catch (error) { setNotice(errorMessage(error, 'save')); }
     finally { setLoading(false); }
   };
 
