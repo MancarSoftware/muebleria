@@ -1,18 +1,42 @@
 import OpenAI from 'openai';
 import { products } from '../src/data/products';
 
-type Request = { method?: string; body?: { query?: string; contextProductId?: string } };
+type AdvisorSpace = 'sala' | 'comedor' | 'dormitorio' | 'oficina';
+type AdvisorPriority = 'confort' | 'reunir' | 'descansar' | 'trabajar';
+type Profile = { space?: AdvisorSpace; size?: 'compacto' | 'medio' | 'amplio'; budget?: number | null; priority?: AdvisorPriority; measurements?: string; notes?: string; contextProductId?: string };
+type Request = { method?: string; body?: { profile?: Profile } };
 type Response = { status: (statusCode: number) => { json: (body: unknown) => void } };
 
-const catalog = products.map(({ id, name, category, price, description, materials, dimensions, colors, tags }) => ({ id, name, category, price, description, materials, dimensions, colors, tags }));
+const spaceTags: Record<AdvisorSpace, string[]> = { sala: ['sala'], comedor: ['comedor'], dormitorio: ['dormitorio'], oficina: ['oficina'] };
+const priorityTags: Record<AdvisorPriority, string[]> = { confort: ['sofá', 'sofa', 'sala'], reunir: ['mesa', 'silla', 'comedor'], descansar: ['cama', 'dormitorio'], trabajar: ['escritorio', 'oficina'] };
 const validIds = new Set(products.map(({ id }) => id));
+const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-EC');
+
+function roomLimit(measurements = '') {
+  const values = measurements.match(/\d+(?:[.,]\d+)?/g)?.map((value) => Number(value.replace(',', '.'))) ?? [];
+  if (values.length < 2) return null;
+  return Math.max(...values.map((value) => value > 20 ? value : value * 100));
+}
+
+function eligibleCatalog(profile: Profile) {
+  const maximum = roomLimit(profile.measurements);
+  return products.filter((product) => {
+    const productWidth = Number(product.dimensions.match(/\d+/)?.[0]) || 0;
+    const isInSpace = profile.space ? spaceTags[profile.space].some((tag) => product.tags.includes(tag)) : true;
+    const isWithinBudget = profile.budget ? product.price <= profile.budget : true;
+    const leavesPassage = maximum ? productWidth <= maximum - 40 : true;
+    return isInSpace && isWithinBudget && leavesPassage;
+  }).map(({ id, name, category, price, description, materials, dimensions, colors, tags }) => ({ id, name, category, price, description, materials, dimensions, colors, tags }));
+}
 
 export default async function handler(request: Request, response: Response) {
   if (request.method !== 'POST') return response.status(405).json({ message: 'Method not allowed.' });
+  const profile = request.body?.profile;
+  if (!profile?.space || !profile.size || !profile.priority) return response.status(400).json({ message: 'Incomplete advisor profile.', recommendations: [] });
+  if (!process.env.OPENAI_API_KEY) return response.status(503).json({ message: 'AI service is not configured.', recommendations: [] });
 
-  const query = request.body?.query?.trim();
-  if (!query) return response.status(400).json({ message: 'Describe what you need.', productIds: [] });
-  if (!process.env.OPENAI_API_KEY) return response.status(503).json({ message: 'AI service is not configured.', productIds: [] });
+  const eligible = eligibleCatalog(profile);
+  if (eligible.length === 0) return response.status(200).json({ message: 'No encontramos piezas actuales que cumplan exactamente con estas condiciones. El showroom puede revisar alternativas o próximas llegadas.', recommendations: [], availabilityNote: 'La disponibilidad, acabados y fecha de entrega se confirman con el showroom antes de reservar.' });
 
   try {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -20,20 +44,21 @@ export default async function handler(request: Request, response: Response) {
       model: 'gpt-5.6-luna',
       reasoning: { effort: 'low' },
       text: { format: { type: 'json_schema', name: 'catalog_recommendation', strict: true, schema: {
-        type: 'object', additionalProperties: false, required: ['message', 'productIds'], properties: {
-          message: { type: 'string', description: 'A concise recommendation in Spanish.' },
-          productIds: { type: 'array', items: { type: 'string' }, maxItems: 3 },
+        type: 'object', additionalProperties: false, required: ['message', 'recommendations', 'availabilityNote'], properties: {
+          message: { type: 'string', description: 'A concise Spanish explanation of the curated selection.' },
+          recommendations: { type: 'array', maxItems: 3, items: { type: 'object', additionalProperties: false, required: ['productId', 'reason'], properties: { productId: { type: 'string' }, reason: { type: 'string', description: 'One concise Spanish reason, based only on catalog facts.' } } } },
+          availabilityNote: { type: 'string', description: 'Always state that the showroom confirms availability, finishes, and delivery date.' },
         },
       } } },
       input: [
-        { role: 'developer', content: `You are Casa Nativa's furniture advisor. Recommend strictly from the supplied catalog. Never invent a product, price, dimension, material, availability, or policy. Return at most three product IDs. Explain the rationale concisely in Spanish and invite the visitor to confirm dimensions and availability with the showroom. Current catalog: ${JSON.stringify(catalog)}` },
-        { role: 'user', content: `Visitor request: ${query}\nCurrent product context (if any): ${request.body?.contextProductId || 'none'}` },
+        { role: 'developer', content: `You are Casa Nativa's furniture advisor. The application already pre-filtered the catalog by room, budget, and clearance. Recommend strictly from ELIGIBLE CATALOG only. Never invent a product, price, dimension, material, availability, delivery date, or policy. Return up to three products, and only product IDs present in the eligible catalog. Be concise, in Spanish. ELIGIBLE CATALOG: ${JSON.stringify(eligible)}` },
+        { role: 'user', content: `Visitor profile: ${JSON.stringify(profile)}. Their stated priority maps to relevant product types: ${JSON.stringify(priorityTags[profile.priority])}.` },
       ],
     });
-    const parsed = JSON.parse(recommendation.output_text || '{}') as { message?: unknown; productIds?: unknown };
-    const productIds = Array.isArray(parsed.productIds) ? parsed.productIds.filter((id): id is string => typeof id === 'string' && validIds.has(id)).slice(0, 3) : [];
-    return response.status(200).json({ message: typeof parsed.message === 'string' ? parsed.message : 'Revisa estas piezas del catálogo.', productIds });
+    const parsed = JSON.parse(recommendation.output_text || '{}') as { message?: unknown; recommendations?: unknown; availabilityNote?: unknown };
+    const recommendations = Array.isArray(parsed.recommendations) ? parsed.recommendations.filter((item): item is { productId: string; reason: string } => typeof item === 'object' && item !== null && typeof (item as { productId?: unknown }).productId === 'string' && validIds.has((item as { productId: string }).productId) && eligible.some((product) => product.id === (item as { productId: string }).productId) && typeof (item as { reason?: unknown }).reason === 'string').slice(0, 3) : [];
+    return response.status(200).json({ message: typeof parsed.message === 'string' ? parsed.message : 'Revisa estas piezas elegidas para tu espacio.', recommendations, availabilityNote: typeof parsed.availabilityNote === 'string' ? parsed.availabilityNote : 'La disponibilidad, acabados y fecha de entrega se confirman con el showroom antes de reservar.' });
   } catch {
-    return response.status(502).json({ message: 'No pudimos preparar una recomendación ahora.', productIds: [] });
+    return response.status(502).json({ message: 'No pudimos preparar una recomendación ahora.', recommendations: [], availabilityNote: 'La disponibilidad, acabados y fecha de entrega se confirman con el showroom antes de reservar.' });
   }
 }
