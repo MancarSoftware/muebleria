@@ -1,5 +1,4 @@
 import type { ProductColorVariant } from '../types/catalog';
-import camaPablitoWhite from '../assets/products/cama-pablito-reference.webp';
 import camaPablitoBlack from '../assets/products/cama-pablito-negro.png';
 import camaPablitoCoffee from '../assets/products/cama-pablito-cafe.png';
 
@@ -39,7 +38,7 @@ export function legacyColorVariants(colors: string[]): ProductColorVariant[] {
 
 const showcaseVariants: Record<string, ProductColorVariant[]> = {
   'cama-pablito': [
-    { id: 'cama-pablito-blanco', name: 'Blanco', hex: '#F4F1E9', imageUrl: camaPablitoWhite, sortOrder: 0 },
+    { id: 'cama-pablito-blanco', name: 'Blanco', hex: '#F4F1E9', sortOrder: 0 },
     { id: 'cama-pablito-negro', name: 'Negro', hex: '#242522', imageUrl: camaPablitoBlack, sortOrder: 1 },
     { id: 'cama-pablito-cafe', name: 'Café', hex: '#704A33', imageUrl: camaPablitoCoffee, sortOrder: 2 },
   ],

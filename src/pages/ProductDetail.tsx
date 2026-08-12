@@ -15,16 +15,34 @@ export function ProductDetail() {
   const product = products.find((item) => item.slug === slug);
   const variants = useMemo(() => product ? productColorVariants(product) : [], [product]);
   const [selectedVariantId, setSelectedVariantId] = useState<string>();
+  const [activeImageUrl, setActiveImageUrl] = useState<string>();
 
   useEffect(() => {
     setSelectedVariantId(variants[0]?.id);
   }, [product?.id]);
+  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? variants[0];
+  const galleryImages = useMemo(() => product ? [selectedVariant?.imageUrl, ...product.images].filter((image, index, images): image is string => Boolean(image) && images.indexOf(image) === index) : [], [product, selectedVariant?.imageUrl]);
+  const hasImageCarousel = Boolean(product && product.images.length > 2);
+
+  useEffect(() => {
+    if (product) setActiveImageUrl(selectedVariant?.imageUrl ?? product.images[0]);
+  }, [product?.id, selectedVariant?.id, selectedVariant?.imageUrl]);
+
+  useEffect(() => {
+    if (!hasImageCarousel || galleryImages.length < 2) return;
+    const timer = window.setTimeout(() => {
+      setActiveImageUrl((currentImage) => {
+        const currentIndex = galleryImages.indexOf(currentImage ?? galleryImages[0]);
+        return galleryImages[(currentIndex + 1) % galleryImages.length];
+      });
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [activeImageUrl, galleryImages, hasImageCarousel]);
 
   if (!product && isLoading) return <section className="empty"><p className="eyebrow">CATÁLOGO</p><h2>Buscando la pieza…</h2></section>;
   if (!product) return <section className="empty"><h1>Esta pieza ya no está disponible.</h1><Link to="/catalog">Volver al catálogo</Link></section>;
 
-  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? variants[0];
-  const galleryImages = [selectedVariant?.imageUrl, ...product.images].filter((image, index, images): image is string => Boolean(image) && images.indexOf(image) === index);
+  const mainImage = activeImageUrl && galleryImages.includes(activeImageUrl) ? activeImageUrl : galleryImages[0] ?? product.images[0];
   const saved = ids.includes(product.id);
   const related = products.filter((item) => item.category === product.category && item.id !== product.id).concat(products.filter((item) => item.id !== product.id)).slice(0, 3);
   const selectedColorName = selectedVariant?.name ?? 'por confirmar';
@@ -32,7 +50,10 @@ export function ProductDetail() {
   return <section className="detail">
     <Link className="back" to="/catalog"><ArrowLeft/> Catálogo</Link>
     <div className="detail-top">
-      <div className="gallery"><img src={galleryImages[0] ?? product.images[0]} alt={`${product.name}${selectedVariant ? ` en ${selectedVariant.name}` : ''}`}/></div>
+      <div className="gallery">
+        <img src={mainImage} alt={`${product.name}${selectedVariant ? ` en ${selectedVariant.name}` : ''}`}/>
+        {hasImageCarousel && <div className="gallery-thumbnails" aria-label="Más fotografías del producto">{product.images.map((image, index) => <button type="button" key={image} className={image === mainImage ? 'selected' : ''} onClick={() => setActiveImageUrl(image)} aria-label={`Ver fotografía ${index + 1} de ${product.name}`}><img src={image} alt=""/></button>)}</div>}
+      </div>
       <div className="detail-copy">
         <p className="eyebrow">{product.category}</p>
         <h1>{product.name}</h1>
