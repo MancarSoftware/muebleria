@@ -31,7 +31,7 @@ export function SpacePlanner() {
   if (isLoading && !products.length) return <section className="space-planner empty"><p className="eyebrow">MI ESPACIO</p><h2>Preparando tu propuesta…</h2></section>;
 
   return <section className="space-planner">
-    <header className="space-hero"><div><p className="eyebrow">MI ESPACIO</p><h1>Una selección<br/><em>que conversa.</em></h1><p>Guarda las piezas que te interesan y danos el contexto para ayudarte a reunirlas bien.</p></div><div className="space-total"><span>{selectedItems.length} {selectedItems.length === 1 ? 'pieza' : 'piezas'}</span><b>${total.toLocaleString('en-US')}</b><small>Total estimado</small></div></header>
+    <div className="space-hero"><div><p className="eyebrow">MI ESPACIO</p><h1>Una selección<br/><em>que conversa.</em></h1><p>Guarda las piezas que te interesan y danos el contexto para ayudarte a reunirlas bien.</p></div><div className="space-total"><span>{selectedItems.length} {selectedItems.length === 1 ? 'pieza' : 'piezas'}</span><b>${total.toLocaleString('en-US')}</b><small>Total estimado</small></div></div>
     <div className="space-layout">
       <section className="space-selection">
         <div className="space-section-head"><div><p className="eyebrow">TU SELECCIÓN</p><h2>{selectedItems.length ? 'Piezas que elegiste.' : 'Tu espacio empieza aquí.'}</h2></div>{selectedItems.length > 0 && <button type="button" onClick={planner.clear}>Vaciar selección</button>}</div>
