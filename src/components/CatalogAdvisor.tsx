@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, Check, LoaderCircle, MessageCircle, Sparkles, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { products } from '../data/products';
+import { products as fallbackProducts } from '../data/products';
 import { whatsappLink } from '../config/business';
 import type { AdvisorProfile, AdvisorResponse, AdvisorSpace } from '../types/advisor';
 import type { Product } from '../types/catalog';
@@ -42,8 +42,8 @@ function roomLimit(measurements: string) {
   return Math.max(...centimetres);
 }
 
-function catalogFallback(profile: AdvisorProfile): ResponseWithSource {
-  const spaceProducts = profile.space ? products.filter((product) => spaceTags[profile.space!].some((tag) => product.tags.includes(tag))) : products;
+function catalogFallback(profile: AdvisorProfile, catalogProducts: Product[]): ResponseWithSource {
+  const spaceProducts = profile.space ? catalogProducts.filter((product) => spaceTags[profile.space!].some((tag) => product.tags.includes(tag))) : catalogProducts;
   const budgetProducts = profile.budget ? spaceProducts.filter((product) => product.price <= profile.budget!) : spaceProducts;
   const limit = roomLimit(profile.measurements);
   const dimensionProducts = limit ? budgetProducts.filter((product) => (Number(product.dimensions.match(/\d+/)?.[0]) || 0) <= limit - 40) : budgetProducts;
@@ -65,7 +65,7 @@ function catalogFallback(profile: AdvisorProfile): ResponseWithSource {
   };
 }
 
-export function CatalogAdvisor({ context }: { context?: Product }) {
+export function CatalogAdvisor({ context, products: catalogProducts = fallbackProducts }: { context?: Product; products?: Product[] }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<AdvisorProfile>(() => initialProfile(context));
@@ -75,7 +75,7 @@ export function CatalogAdvisor({ context }: { context?: Product }) {
   const patchProfile = (next: Partial<AdvisorProfile>) => setProfile((current) => ({ ...current, ...next }));
   const close = () => { setOpen(false); setResult(null); setStep(0); };
   const canAdvance = step === 0 ? Boolean(profile.space) : step === 1 ? Boolean(profile.size) : Boolean(profile.priority);
-  const selectedProducts = result ? result.recommendations.map(({ productId, reason }) => ({ product: products.find((item) => item.id === productId), reason })).filter((item): item is { product: Product; reason: string } => Boolean(item.product)) : [];
+  const selectedProducts = result ? result.recommendations.map(({ productId, reason }) => ({ product: catalogProducts.find((item) => item.id === productId), reason })).filter((item): item is { product: Product; reason: string } => Boolean(item.product)) : [];
 
   const submit = async () => {
     if (!profile.space || !profile.size || !profile.priority) return;
@@ -86,7 +86,7 @@ export function CatalogAdvisor({ context }: { context?: Product }) {
       if (!response.ok) throw new Error('AI unavailable');
       setResult({ ...(await response.json() as AdvisorResponse), source: 'ai' });
     } catch {
-      setResult(catalogFallback(profile));
+      setResult(catalogFallback(profile, catalogProducts));
     } finally { setLoading(false); }
   };
 
