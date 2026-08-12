@@ -2,6 +2,14 @@ export const catalogCategories = ['Sofás', 'Camas', 'Mesas de comedor', 'Sillas
 export type Category = typeof catalogCategories[number] | string;
 export type ProductStatus = 'draft' | 'published';
 export type InventoryStatus = 'in_stock' | 'low_stock' | 'made_to_order' | 'out_of_stock';
+export type ProductColorVariant = {
+  id: string;
+  name: string;
+  hex: string;
+  imageUrl?: string;
+  imageStoragePath?: string | null;
+  sortOrder: number;
+};
 export type Product = {
   id: string;
   slug: string;
@@ -13,6 +21,7 @@ export type Product = {
   materials: string[];
   dimensions: string;
   colors: string[];
+  variants?: ProductColorVariant[];
   featured: boolean;
   tags: string[];
   status?: ProductStatus;

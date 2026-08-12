@@ -26,6 +26,10 @@ El propietario gestiona productos en `/admin`: crea borradores, sube fotos, edit
 
 Sin estas variables, el sitio conserva el catálogo de demostración y `/admin` muestra los pasos de conexión en lugar de permitir cambios.
 
+### Variantes de color
+
+Cada producto puede incluir tonos exactos y una fotografía específica por color. El visitante ve el color seleccionado, el tono real y, cuando existe, la imagen correspondiente; si no existe, la interfaz indica que la foto es referencial. Para proyectos Supabase que ya ejecutaron la migración inicial, ejecuta también `supabase/migrations/202608120002_product_color_variants.sql` en el SQL Editor. Después, gestiona cada variante desde el bloque **Colores y variantes** de `/admin`.
+
 ## Asesoría IA de catálogo
 
 `api/recommendations.ts` es una función serverless compatible con Vercel. Configura `OPENAI_API_KEY` únicamente en las variables de entorno de Vercel. La clave nunca llega al bundle del navegador. Cuando `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` están configuradas, la función consulta el catálogo publicado del cliente antes de sugerir piezas.

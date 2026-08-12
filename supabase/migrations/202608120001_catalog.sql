@@ -39,8 +39,19 @@ create table public.product_images (
   created_at timestamptz not null default now()
 );
 
+create table public.product_color_variants (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products(id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 80),
+  color_hex text not null check (color_hex ~ '^#[0-9A-Fa-f]{6}$'),
+  image_storage_path text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 create index products_published_order_idx on public.products(status, sort_order, created_at desc);
 create index product_images_product_order_idx on public.product_images(product_id, sort_order);
+create index product_color_variants_product_order_idx on public.product_color_variants(product_id, sort_order);
 
 create or replace function public.set_updated_at() returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end; $$;
 create trigger products_set_updated_at before update on public.products for each row execute function public.set_updated_at();
@@ -52,12 +63,15 @@ $$;
 alter table public.profiles enable row level security;
 alter table public.products enable row level security;
 alter table public.product_images enable row level security;
+alter table public.product_color_variants enable row level security;
 
 create policy "Managers can view their profile" on public.profiles for select using (id = auth.uid());
 create policy "Visitors can view published products" on public.products for select using (status = 'published');
 create policy "Managers can manage products" on public.products for all using (public.is_catalog_manager()) with check (public.is_catalog_manager());
 create policy "Visitors can view images for published products" on public.product_images for select using (exists (select 1 from public.products where products.id = product_images.product_id and products.status = 'published'));
 create policy "Managers can manage product images" on public.product_images for all using (public.is_catalog_manager()) with check (public.is_catalog_manager());
+create policy "Visitors can view variants for published products" on public.product_color_variants for select using (exists (select 1 from public.products where products.id = product_color_variants.product_id and products.status = 'published'));
+create policy "Managers can manage product color variants" on public.product_color_variants for all using (public.is_catalog_manager()) with check (public.is_catalog_manager());
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('product-images', 'product-images', true, 10485760, array['image/jpeg', 'image/png', 'image/webp'])
