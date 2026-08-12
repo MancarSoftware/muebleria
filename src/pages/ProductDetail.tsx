@@ -32,7 +32,7 @@ export function ProductDetail() {
   return <section className="detail">
     <Link className="back" to="/catalog"><ArrowLeft/> Catálogo</Link>
     <div className="detail-top">
-      <div className="gallery"><img src={galleryImages[0] ?? product.images[0]} alt={`${product.name}${selectedVariant ? ` en ${selectedVariant.name}` : ''}`}/>{selectedVariant && <p className="gallery-caption">{selectedVariant.imageUrl ? `Vista de ${selectedVariant.name}` : 'Foto referencial · el tono seleccionado puede variar según la pantalla.'}</p>}</div>
+      <div className="gallery"><img src={galleryImages[0] ?? product.images[0]} alt={`${product.name}${selectedVariant ? ` en ${selectedVariant.name}` : ''}`}/></div>
       <div className="detail-copy">
         <p className="eyebrow">{product.category}</p>
         <h1>{product.name}</h1>
@@ -41,7 +41,7 @@ export function ProductDetail() {
         <dl>
           <div><dt>Materiales</dt><dd>{product.materials.join(' · ')}</dd></div>
           <div><dt>Dimensiones</dt><dd>{product.dimensions}</dd></div>
-          <div className="color-detail"><dt>Colores</dt><dd>{variants.length ? <><div className="color-picker" role="radiogroup" aria-label="Selecciona un color">{variants.map((variant) => <button type="button" key={variant.id} className={variant.id === selectedVariant?.id ? 'selected' : ''} aria-checked={variant.id === selectedVariant?.id} role="radio" onClick={() => setSelectedVariantId(variant.id)} title={variant.name}><i style={{ backgroundColor: variant.hex }}/><span className="sr-only">{variant.name}</span></button>)}</div><p className="selected-color" aria-live="polite"><b>{selectedColorName}</b><span>{selectedVariant?.imageUrl ? 'La fotografía muestra esta variante.' : 'Foto referencial'}</span></p></> : 'Consulta disponibilidad'}</dd></div>
+          <div className="color-detail"><dt>Colores</dt><dd>{variants.length ? <div className="color-picker" role="radiogroup" aria-label="Selecciona un color">{variants.map((variant) => <button type="button" key={variant.id} className={variant.id === selectedVariant?.id ? 'selected' : ''} aria-checked={variant.id === selectedVariant?.id} role="radio" onClick={() => setSelectedVariantId(variant.id)} title={variant.name}><i style={{ backgroundColor: variant.hex }}/><span className="sr-only">{variant.name}</span></button>)}</div> : 'Consulta disponibilidad'}</dd></div>
         </dl>
         <CatalogAdvisor context={product} products={products}/>
         <a className="dark-button full" href={whatsappLink(`Hola, me interesa ${product.name} en color ${selectedColorName}. La vi en el sitio web y quisiera más información.`)} target="_blank" rel="noreferrer">Consultar por WhatsApp</a>
