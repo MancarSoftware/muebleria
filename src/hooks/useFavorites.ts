@@ -1,2 +1,10 @@
-import {useEffect,useState} from 'react';
-export function useFavorites(){const [ids,setIds]=useState<string[]>(()=>JSON.parse(localStorage.getItem('casa-favorites')||'[]'));useEffect(()=>localStorage.setItem('casa-favorites',JSON.stringify(ids)),[ids]);return {ids,toggle:(id:string)=>setIds(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id])};}
+import { useSpacePlanner } from './useSpacePlanner';
+
+// Backwards-compatible adapter for existing catalog filters.
+export function useFavorites() {
+  const planner = useSpacePlanner();
+  return {
+    ids: planner.items.map((item) => item.productId),
+    toggle: (id: string) => planner.has(id) ? planner.remove(id) : planner.add(id),
+  };
+}

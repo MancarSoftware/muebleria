@@ -6,11 +6,11 @@ import { ProductCard } from '../components/ProductCard';
 import { whatsappLink } from '../config/business';
 import { useCatalog } from '../hooks/useCatalog';
 import { productColorVariants } from '../lib/colorVariants';
-import { useFavorites } from '../hooks/useFavorites';
+import { useSpacePlanner } from '../hooks/useSpacePlanner';
 
 export function ProductDetail() {
   const { slug } = useParams();
-  const { ids, toggle } = useFavorites();
+  const planner = useSpacePlanner();
   const { products, isLoading } = useCatalog();
   const product = products.find((item) => item.slug === slug);
   const variants = useMemo(() => product ? productColorVariants(product) : [], [product]);
@@ -43,7 +43,7 @@ export function ProductDetail() {
   if (!product) return <section className="empty"><h1>Esta pieza ya no está disponible.</h1><Link to="/catalog">Volver al catálogo</Link></section>;
 
   const mainImage = activeImageUrl && galleryImages.includes(activeImageUrl) ? activeImageUrl : galleryImages[0] ?? product.images[0];
-  const saved = ids.includes(product.id);
+  const inSpace = planner.has(product.id);
   const related = products.filter((item) => item.category === product.category && item.id !== product.id).concat(products.filter((item) => item.id !== product.id)).slice(0, 3);
   const selectedColorName = selectedVariant?.name ?? 'por confirmar';
 
@@ -62,11 +62,11 @@ export function ProductDetail() {
         <dl>
           <div><dt>Materiales</dt><dd>{product.materials.join(' · ')}</dd></div>
           <div><dt>Dimensiones</dt><dd>{product.dimensions}</dd></div>
-          <div className="color-detail"><dt>Colores</dt><dd>{variants.length ? <div className="color-picker" role="radiogroup" aria-label="Selecciona un color">{variants.map((variant) => <button type="button" key={variant.id} className={variant.id === selectedVariant?.id ? 'selected' : ''} aria-checked={variant.id === selectedVariant?.id} role="radio" onClick={() => setSelectedVariantId(variant.id)} title={variant.name}><i style={{ backgroundColor: variant.hex }}/><span className="sr-only">{variant.name}</span></button>)}</div> : 'Consulta disponibilidad'}</dd></div>
+          <div className="color-detail"><dt>Colores</dt><dd>{variants.length ? <div className="color-picker" role="radiogroup" aria-label="Selecciona un color">{variants.map((variant) => <button type="button" key={variant.id} className={variant.id === selectedVariant?.id ? 'selected' : ''} aria-checked={variant.id === selectedVariant?.id} role="radio" onClick={() => { setSelectedVariantId(variant.id); if (inSpace) planner.updateColor(product.id, variant.name); }} title={variant.name}><i style={{ backgroundColor: variant.hex }}/><span className="sr-only">{variant.name}</span></button>)}</div> : 'Consulta disponibilidad'}</dd></div>
         </dl>
         <CatalogAdvisor context={product} products={products}/>
         <a className="dark-button full" href={whatsappLink(`Hola, me interesa ${product.name} en color ${selectedColorName}. La vi en el sitio web y quisiera más información.`)} target="_blank" rel="noreferrer">Consultar por WhatsApp</a>
-        <button className="save" onClick={() => toggle(product.id)}><Heart fill={saved ? 'currentColor' : 'none'}/> {saved ? 'Guardado en favoritos' : 'Guardar en favoritos'}</button>
+        <button className="save" onClick={() => inSpace ? planner.remove(product.id) : planner.add(product.id, selectedColorName)}><Heart fill={inSpace ? 'currentColor' : 'none'}/> {inSpace ? 'En mi espacio' : 'Añadir a mi espacio'}</button>
         <ul>{['Materiales seleccionados para durar', 'Entrega coordinada y atención personal', 'Asesoría para tu espacio'].map((item) => <li key={item}><Check/>{item}</li>)}</ul>
       </div>
     </div>
