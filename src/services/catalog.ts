@@ -77,3 +77,51 @@ export async function deleteProduct(productId: string) {
   const { error } = await supabase.from('products').delete().eq('id', productId);
   if (error) throw error;
 }
+
+async function imageFileFromUrl(imageUrl: string, productSlug: string, index: number): Promise<File> {
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Could not download the demo image for ${productSlug}.`);
+  const image = await response.blob();
+  const extension = image.type === 'image/png' ? 'png' : image.type === 'image/webp' ? 'webp' : 'jpg';
+  return new File([image], `${productSlug}-${index + 1}.${extension}`, { type: image.type || 'image/jpeg' });
+}
+
+export async function seedDemoCatalog(): Promise<{ created: number; skipped: number; imagesWithFallback: number }> {
+  if (!supabase) throw new Error('Supabase is not configured.');
+
+  const { data, error } = await supabase.from('products').select('slug');
+  if (error) throw error;
+
+  const existingSlugs = new Set((data as Array<{ slug: string }>).map((product) => product.slug));
+  let created = 0;
+  let skipped = 0;
+  let imagesWithFallback = 0;
+
+  for (const [index, demoProduct] of fallbackProducts.entries()) {
+    if (existingSlugs.has(demoProduct.slug)) {
+      skipped += 1;
+      continue;
+    }
+
+    const id = await saveProduct({
+      ...demoProduct,
+      id: undefined,
+      images: undefined,
+      status: 'published',
+      inventoryStatus: 'in_stock',
+      leadTimeDays: 14,
+      sortOrder: index,
+    });
+
+    try {
+      const imageFiles = await Promise.all(demoProduct.images.map((imageUrl, imageIndex) => imageFileFromUrl(imageUrl, demoProduct.slug, imageIndex)));
+      await uploadProductImages(id, imageFiles);
+    } catch {
+      imagesWithFallback += 1;
+    }
+
+    created += 1;
+  }
+
+  return { created, skipped, imagesWithFallback };
+}

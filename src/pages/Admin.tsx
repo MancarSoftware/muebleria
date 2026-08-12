@@ -1,8 +1,8 @@
-import { ArrowLeft, Check, ImagePlus, LoaderCircle, LogOut, PackagePlus, Pencil, Plus, Trash2, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Check, DatabaseZap, ImagePlus, LoaderCircle, LogOut, PackagePlus, Pencil, Plus, Trash2, UploadCloud } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { deleteProduct, getAdminProducts, removeProductImage, saveProduct, type ProductDraft, uploadProductImages } from '../services/catalog';
+import { deleteProduct, getAdminProducts, removeProductImage, saveProduct, seedDemoCatalog, type ProductDraft, uploadProductImages } from '../services/catalog';
 import { catalogCategories, type InventoryStatus, type Product, type ProductStatus } from '../types/catalog';
 
 type Profile = { role: 'admin' | 'editor'; display_name: string | null };
@@ -74,6 +74,20 @@ export function Admin() {
   const selectProduct = (product: Product) => { setSelected(toDraft(product)); setFiles([]); setNotice(''); };
   const createProduct = () => { setSelected(blankProduct()); setFiles([]); setNotice(''); };
 
+  const seedCatalog = async () => {
+    setLoading(true); setNotice('');
+    try {
+      const result = await seedDemoCatalog();
+      const nextProducts = await loadProducts();
+      if (nextProducts[0]) selectProduct(nextProducts[0]);
+      setNotice(result.imagesWithFallback
+        ? `Cargamos ${result.created} piezas. ${result.imagesWithFallback} usan una imagen de respaldo y puedes reemplazarla desde el editor.`
+        : `Cargamos ${result.created} piezas y sus imágenes en el catálogo de prueba.`);
+    } catch {
+      setNotice('No pudimos cargar las piezas de demostración. Revisa los permisos de Supabase y vuelve a intentarlo.');
+    } finally { setLoading(false); }
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selected.name || !selected.slug || !selected.description || !selected.dimensions) { setNotice('Completa nombre, URL, descripción y dimensiones antes de guardar.'); return; }
@@ -117,7 +131,7 @@ export function Admin() {
   if (!isAuthenticated) return <AdminLogin email={email} password={password} notice={notice} loading={loading} onEmail={setEmail} onPassword={setPassword} onSubmit={login}/>;
   if (!profile) return <main className="admin-shell admin-state"><p className="eyebrow">ACCESO RESTRINGIDO</p><h1>Tu cuenta todavía no tiene permisos de catálogo.</h1><p>Pide al administrador que añada tu usuario a la tabla <code>profiles</code> con rol <code>admin</code> o <code>editor</code>.</p><button className="dark-button" onClick={logout}>Cerrar sesión</button></main>;
 
-  return <main className="admin-shell"><header className="admin-header"><Link className="brand" to="/"><i>CN</i><span>Casa Nativa</span></Link><div><span>{profile.display_name || 'Administración'}</span><button onClick={logout}><LogOut/> Cerrar sesión</button></div></header><section className="admin-hero"><div><p className="eyebrow">CATÁLOGO PRIVADO</p><h1>Piezas que<br/><em>sí puedes gestionar.</em></h1></div><div><b>{publishedCount}</b><span>publicadas</span><b>{products.length - publishedCount}</b><span>en borrador</span></div></section><div className="admin-layout"><aside className="admin-list"><button className="admin-new" type="button" onClick={createProduct}><PackagePlus/> Nuevo producto</button><p className="eyebrow">TU CATÁLOGO · {products.length}</p>{products.map((product) => <button className={`admin-product ${selectedId === product.id ? 'selected' : ''}`} type="button" key={product.id} onClick={() => selectProduct(product)}><img src={product.images[0]} alt=""/><span><b>{product.name}</b><small>{product.status === 'published' ? 'Publicado' : 'Borrador'} · ${product.price.toLocaleString('en-US')}</small></span><Pencil/></button>)}</aside><ProductEditor product={selected} files={files} notice={notice} loading={loading} onChange={update} onFiles={setFiles} onSubmit={submit} onDelete={remove} onRemoveImage={removeImage}/></div></main>;
+  return <main className="admin-shell"><header className="admin-header"><Link className="brand" to="/"><i>CN</i><span>Casa Nativa</span></Link><div><span>{profile.display_name || 'Administración'}</span><button onClick={logout}><LogOut/> Cerrar sesión</button></div></header><section className="admin-hero"><div><p className="eyebrow">CATÁLOGO PRIVADO</p><h1>Piezas que<br/><em>sí puedes gestionar.</em></h1></div><div><b>{publishedCount}</b><span>publicadas</span><b>{products.length - publishedCount}</b><span>en borrador</span></div></section><div className="admin-layout"><aside className="admin-list"><button className="admin-new" type="button" onClick={createProduct}><PackagePlus/> Nuevo producto</button>{products.length === 0 && <button className="admin-seed" type="button" onClick={seedCatalog} disabled={loading}><DatabaseZap/> {loading ? 'Cargando piezas…' : 'Cargar 6 piezas de prueba'}</button>}<p className="eyebrow">TU CATÁLOGO · {products.length}</p>{products.map((product) => <button className={`admin-product ${selectedId === product.id ? 'selected' : ''}`} type="button" key={product.id} onClick={() => selectProduct(product)}><img src={product.images[0]} alt=""/><span><b>{product.name}</b><small>{product.status === 'published' ? 'Publicado' : 'Borrador'} · ${product.price.toLocaleString('en-US')}</small></span><Pencil/></button>)}</aside><ProductEditor product={selected} files={files} notice={notice} loading={loading} onChange={update} onFiles={setFiles} onSubmit={submit} onDelete={remove} onRemoveImage={removeImage}/></div></main>;
 }
 
 function AdminSetup() { return <main className="admin-shell admin-setup"><Link className="brand" to="/"><i>CN</i><span>Casa Nativa</span></Link><p className="eyebrow">CONFIGURACIÓN PENDIENTE</p><h1>Conecta el catálogo<br/><em>del cliente.</em></h1><p>Este espacio queda listo para el propietario en cuanto se conecte su proyecto Supabase.</p><ol><li>Ejecuta la migración <code>supabase/migrations/202608120001_catalog.sql</code>.</li><li>Crea el usuario propietario en Supabase Auth y asígnale rol <code>admin</code>.</li><li>Añade <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> al entorno.</li></ol><Link className="dark-button" to="/">Volver al sitio <ArrowLeft/></Link></main>;
