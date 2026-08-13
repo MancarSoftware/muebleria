@@ -50,20 +50,22 @@ export async function saveSpaceProposal(input: SpaceProposalInput): Promise<Save
     throw new Error('Completa tu nombre y un número de WhatsApp válido.');
   }
 
-  try {
-    const response = await fetch('/api/space-proposals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-    const isJson = response.headers.get('content-type')?.includes('application/json');
-    const body = isJson ? await response.json() as { id?: string; message?: string } : null;
-    if (response.ok && body?.id) return { id: body.id };
-    // Vite does not host serverless routes. The server route is preferred in
-    // production; the database function validates the same catalog data locally.
-    if (response.status !== 404 && response.status !== 503 && isJson) throw new Error(body?.message || 'No pudimos guardar la propuesta.');
-  } catch (error) {
-    if (error instanceof Error && !/Unexpected token|No pudimos guardar/.test(error.message)) throw error;
+  if (import.meta.env.VITE_ROUTER_MODE !== 'hash') {
+    try {
+      const response = await fetch('/api/space-proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const isJson = response.headers.get('content-type')?.includes('application/json');
+      const body = isJson ? await response.json() as { id?: string; message?: string } : null;
+      if (response.ok && body?.id) return { id: body.id };
+      // Vite does not host serverless routes. The database function validates the
+      // same catalog data locally, and GitHub Pages deliberately uses it directly.
+      if (response.status !== 404 && response.status !== 503 && isJson) throw new Error(body?.message || 'No pudimos guardar la propuesta.');
+    } catch (error) {
+      if (error instanceof Error && !/Unexpected token|No pudimos guardar/.test(error.message)) throw error;
+    }
   }
 
   if (!supabase) throw new Error('El registro de propuestas aún no está configurado.');

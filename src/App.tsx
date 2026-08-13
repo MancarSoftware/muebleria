@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { SpacePlannerProvider } from './hooks/useSpacePlanner';
 
@@ -24,5 +24,6 @@ function PublicSite() {
 }
 
 export default function App() {
-  return <BrowserRouter><SpacePlannerProvider><Suspense fallback={<PageLoading/>}><Routes><Route path="/admin" element={<Admin/>}/><Route path="*" element={<PublicSite/>}/></Routes></Suspense></SpacePlannerProvider></BrowserRouter>;
+  const Router = import.meta.env.VITE_ROUTER_MODE === 'hash' ? HashRouter : BrowserRouter;
+  return <Router><SpacePlannerProvider><Suspense fallback={<PageLoading/>}><Routes><Route path="/admin" element={<Admin/>}/><Route path="*" element={<PublicSite/>}/></Routes></Suspense></SpacePlannerProvider></Router>;
 }
