@@ -1,12 +1,14 @@
-import { ArrowLeft, Check, DatabaseZap, ImagePlus, LoaderCircle, LogOut, PackagePlus, Pencil, Plus, Trash2, UploadCloud, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Activity, ArrowLeft, Check, DatabaseZap, Eye, ImagePlus, LoaderCircle, LogOut, MousePointerClick, PackagePlus, Pencil, Plus, RefreshCw, Trash2, UploadCloud, Users, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { legacyColorVariants } from '../lib/colorVariants';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { getRealtimeAnalytics, type AnalyticsDashboardError, type RealtimeAnalytics } from '../services/analyticsDashboard';
 import { deleteProduct, getAdminProducts, removeProductImage, saveProduct, saveProductVariants, seedDemoCatalog, type ProductDraft, uploadProductImages, uploadProductVariantImage } from '../services/catalog';
 import { catalogCategories, type InventoryStatus, type Product, type ProductColorVariant, type ProductStatus } from '../types/catalog';
 
 type Profile = { role: 'admin' | 'editor'; display_name: string | null };
+type AnalyticsStatus = 'loading' | 'ready' | 'not-configured' | 'error';
 
 const inventoryLabels: Record<InventoryStatus, string> = {
   in_stock: 'En stock',
@@ -53,6 +55,9 @@ export function Admin() {
   const [files, setFiles] = useState<File[]>([]);
   const [variantFiles, setVariantFiles] = useState<Record<string, File>>({});
   const [loading, setLoading] = useState(false);
+  const [analytics, setAnalytics] = useState<RealtimeAnalytics | null>(null);
+  const [analyticsStatus, setAnalyticsStatus] = useState<AnalyticsStatus>('loading');
+  const [analyticsMessage, setAnalyticsMessage] = useState('');
 
   const selectedId = selected.id;
   const publishedCount = useMemo(() => products.filter((product) => product.status === 'published').length, [products]);
@@ -76,6 +81,26 @@ export function Admin() {
     await loadProducts();
   };
 
+  const loadAnalytics = useCallback(async (quiet = false) => {
+    if (!quiet) setAnalyticsStatus('loading');
+    try {
+      const nextAnalytics = await getRealtimeAnalytics();
+      setAnalytics(nextAnalytics);
+      setAnalyticsStatus('ready');
+      setAnalyticsMessage('');
+    } catch (error) {
+      const detail = error as AnalyticsDashboardError;
+      setAnalytics(null);
+      if (detail.code === 'analytics_not_configured') {
+        setAnalyticsStatus('not-configured');
+        setAnalyticsMessage('Ejecuta la migración de analítica en Supabase para activar este resumen.');
+      } else {
+        setAnalyticsStatus('error');
+        setAnalyticsMessage('No pudimos consultar la actividad del sitio en este momento.');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!supabase) { setSessionReady(true); return; }
     supabase.auth.getSession().then(async ({ data }) => {
@@ -90,6 +115,13 @@ export function Admin() {
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    void loadAnalytics();
+    const interval = window.setInterval(() => { void loadAnalytics(true); }, 30_000);
+    return () => window.clearInterval(interval);
+  }, [profile, loadAnalytics]);
 
   const login = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -189,6 +221,7 @@ export function Admin() {
   return <main className="admin-shell">
     <header className="admin-header"><Link className="brand" to="/"><i>CN</i><span>Casa Nativa</span></Link><div><span>{profile.display_name || 'Administración'}</span><button onClick={logout}><LogOut/> Cerrar sesión</button></div></header>
     <section className="admin-hero"><div><p className="eyebrow">CATÁLOGO PRIVADO</p><h1>Piezas que<br/><em>sí puedes gestionar.</em></h1></div><div><b>{publishedCount}</b><span>publicadas</span><b>{products.length - publishedCount}</b><span>en borrador</span></div></section>
+    <AnalyticsPulse analytics={analytics} status={analyticsStatus} message={analyticsMessage} onRefresh={() => void loadAnalytics()}/>
     <div className="admin-layout">
       <aside className="admin-list">
         <button className="admin-new" type="button" onClick={createProduct}><PackagePlus/> Nuevo producto</button>
@@ -199,6 +232,39 @@ export function Admin() {
       <ProductEditor product={selected} files={files} variantFiles={variantFiles} notice={notice} loading={loading} onChange={update} onFiles={setFiles} onVariants={updateVariants} onVariantFiles={setVariantFiles} onSubmit={submit} onDelete={remove} onRemoveImage={removeImage}/>
     </div>
   </main>;
+}
+
+function AnalyticsPulse({ analytics, status, message, onRefresh }: { analytics: RealtimeAnalytics | null; status: AnalyticsStatus; message: string; onRefresh: () => void }) {
+  const updatedAt = analytics ? new Intl.DateTimeFormat('es-EC', { hour: '2-digit', minute: '2-digit' }).format(new Date(analytics.updatedAt)) : null;
+  const values = analytics ? [
+    { label: 'visitantes activos', value: analytics.activeUsers, icon: Users },
+    { label: 'vistas de página', value: analytics.pageViews, icon: Eye },
+    { label: 'interacciones', value: analytics.eventCount, icon: MousePointerClick },
+  ] : [];
+
+  return <section className="analytics-pulse" aria-live="polite">
+    <header className="analytics-pulse-head"><div><p className="eyebrow"><Activity/> PULSO DEL SITIO</p><h2>Lo que sucede <em>ahora.</em></h2><p>Actividad anónima de los últimos 30 minutos. Se actualiza cada 30 segundos.</p></div><button type="button" className="analytics-refresh" onClick={onRefresh} disabled={status === 'loading'}><RefreshCw className={status === 'loading' ? 'spin' : ''}/> Actualizar</button></header>
+    {status === 'loading' && <div className="analytics-state"><LoaderCircle className="spin"/><span>Consultando la actividad del sitio…</span></div>}
+    {status === 'not-configured' && <div className="analytics-state analytics-setup"><Activity/><div><b>Analítica lista para activar.</b><span>{message}</span><small>No requiere Google Cloud ni otra cuenta de pago.</small></div></div>}
+    {status === 'error' && <div className="analytics-state analytics-error"><Activity/><div><b>No pudimos actualizar el pulso.</b><span>{message}</span></div></div>}
+    {status === 'ready' && analytics && <><div className="analytics-metrics">{values.map(({ label, value, icon: Icon }) => <article key={label}><Icon/><b>{value}</b><span>{label}</span></article>)}<p>Actualizado a las {updatedAt}</p></div><div className="analytics-breakdown"><AnalyticsList title="Eventos principales" items={analytics.topEvents} empty="Aún no se registran interacciones."/><AnalyticsList title="Páginas más vistas" items={analytics.topPages} empty="Aún no se registran vistas de página."/></div></>}
+  </section>;
+}
+
+function AnalyticsList({ title, items, empty }: { title: string; items: Array<{ name: string; count: number }>; empty: string }) {
+  return <article className="analytics-list"><p className="eyebrow">{title}</p>{items.length ? <ol>{items.map((item) => <li key={item.name}><span>{readableAnalyticsName(item.name)}</span><b>{item.count}</b></li>)}</ol> : <span className="analytics-empty">{empty}</span>}</article>;
+}
+
+function readableAnalyticsName(value: string) {
+  const labels: Record<string, string> = {
+    page_view: 'Vistas de página',
+    view_item: 'Productos consultados',
+    add_to_space: 'Piezas a mi espacio',
+    remove_from_space: 'Piezas retiradas',
+    generate_lead: 'Propuestas enviadas',
+    contact_whatsapp: 'Clics a WhatsApp',
+  };
+  return labels[value] ?? value;
 }
 
 function AdminSetup() {
