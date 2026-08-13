@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowDownRight, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import hero from '../assets/hero-showroom.png';
+import hero from '../assets/hero-showroom.webp';
 import { ProductCard } from '../components/ProductCard';
 import { useCatalog } from '../hooks/useCatalog';
 

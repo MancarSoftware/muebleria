@@ -51,8 +51,8 @@ export function ProductDetail() {
     <Link className="back" to="/catalog"><ArrowLeft/> Catálogo</Link>
     <div className="detail-top">
       <div className="gallery">
-        <img src={mainImage} alt={`${product.name}${selectedVariant ? ` en ${selectedVariant.name}` : ''}`}/>
-        {hasImageCarousel && <div className="gallery-thumbnails" aria-label="Más fotografías del producto">{product.images.map((image, index) => <button type="button" key={image} className={image === mainImage ? 'selected' : ''} onClick={() => setActiveImageUrl(image)} aria-label={`Ver fotografía ${index + 1} de ${product.name}`}><img src={image} alt=""/></button>)}</div>}
+        <img src={mainImage} alt={`${product.name}${selectedVariant ? ` en ${selectedVariant.name}` : ''}`} decoding="async" fetchPriority="high" sizes="(max-width: 900px) 100vw, 55vw"/>
+        {hasImageCarousel && <div className="gallery-thumbnails" aria-label="Más fotografías del producto">{product.images.map((image, index) => <button type="button" key={image} className={image === mainImage ? 'selected' : ''} onClick={() => setActiveImageUrl(image)} aria-label={`Ver fotografía ${index + 1} de ${product.name}`}><img src={image} alt="" loading="lazy" decoding="async"/></button>)}</div>}
       </div>
       <div className="detail-copy">
         <p className="eyebrow">{product.category}</p>

@@ -1,4 +1,5 @@
 import { products as fallbackProducts } from '../data/products';
+import { optimizeImageForUpload } from '../lib/imageUpload';
 import { supabase } from '../lib/supabase';
 import type { InventoryStatus, Product, ProductColorVariant, ProductStatus } from '../types/catalog';
 
@@ -66,9 +67,10 @@ export async function uploadProductImages(productId: string, files: File[]) {
   if (!supabase || files.length === 0) return;
   const paths: string[] = [];
   for (const [index, file] of files.entries()) {
-    const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const optimizedFile = await optimizeImageForUpload(file);
+    const extension = optimizedFile.name.split('.').pop()?.toLowerCase() || 'webp';
     const path = `${productId}/${crypto.randomUUID()}-${index}.${extension}`;
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { cacheControl: '31536000', contentType: file.type, upsert: false });
+    const { error } = await supabase.storage.from(bucket).upload(path, optimizedFile, { cacheControl: '31536000', contentType: optimizedFile.type, upsert: false });
     if (error) throw error;
     paths.push(path);
   }
@@ -116,9 +118,10 @@ export async function saveProductVariants(productId: string, variants: ProductCo
 
 export async function uploadProductVariantImage(productId: string, variant: ProductColorVariant, file: File): Promise<ProductColorVariant> {
   if (!supabase) throw new Error('Supabase is not configured.');
-  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const optimizedFile = await optimizeImageForUpload(file);
+  const extension = optimizedFile.name.split('.').pop()?.toLowerCase() || 'webp';
   const storagePath = `${productId}/variants/${variant.id}-${crypto.randomUUID()}.${extension}`;
-  const { error } = await supabase.storage.from(bucket).upload(storagePath, file, { cacheControl: '31536000', contentType: file.type, upsert: false });
+  const { error } = await supabase.storage.from(bucket).upload(storagePath, optimizedFile, { cacheControl: '31536000', contentType: optimizedFile.type, upsert: false });
   if (error) throw error;
   if (variant.imageStoragePath) await supabase.storage.from(bucket).remove([variant.imageStoragePath]);
   const imageUrl = supabase.storage.from(bucket).getPublicUrl(storagePath).data.publicUrl;

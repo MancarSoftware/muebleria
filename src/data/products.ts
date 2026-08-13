@@ -1,9 +1,9 @@
 import type { Product } from '../types/catalog';
-import sofaOlmo from '../assets/products/sofa-olmo-editorial.png';
-import mesaAura from '../assets/products/mesa-aura-editorial.png';
-import mesaTrazo from '../assets/products/mesa-trazo-editorial.png';
-import camaLuna from '../assets/products/cama-luna-editorial.png';
-import sillaCedro from '../assets/products/silla-cedro-editorial.png';
+import sofaOlmo from '../assets/products/sofa-olmo-editorial.webp';
+import mesaAura from '../assets/products/mesa-aura-editorial.webp';
+import mesaTrazo from '../assets/products/mesa-trazo-editorial.webp';
+import camaLuna from '../assets/products/cama-luna-editorial.webp';
+import sillaCedro from '../assets/products/silla-cedro-editorial.webp';
 const img=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1400&q=85`;
 export const products:Product[]=[
  {id:'p1',slug:'sofa-olmo',name:'Sofá Olmo',category:'Sofás',price:1290,description:'Silueta baja y profunda para conversaciones largas. Módulos que se acomodan a tu ritmo.',images:[sofaOlmo],materials:['Lino belga','Roble macizo'],dimensions:'240 × 96 × 72 cm',colors:['Arena','Oliva','Carbón'],featured:true,tags:['sala','modular','natural','coleccion-natural']},

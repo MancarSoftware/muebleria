@@ -1,6 +1,6 @@
 import type { ProductColorVariant } from '../types/catalog';
-import camaPablitoBlack from '../assets/products/cama-pablito-negro.png';
-import camaPablitoCoffee from '../assets/products/cama-pablito-cafe.png';
+import camaPablitoBlack from '../assets/products/cama-pablito-negro.webp';
+import camaPablitoCoffee from '../assets/products/cama-pablito-cafe.webp';
 
 const namedColors: Record<string, string> = {
   arena: '#D6C4A5',

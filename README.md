@@ -20,7 +20,7 @@ npm run dev
 El propietario gestiona productos en `/admin`: crea borradores, sube fotos, edita textos y publica piezas. El sitio público y la asesoría IA solo leen productos publicados.
 
 1. Crea un proyecto Supabase en la cuenta del cliente.
-2. Ejecuta `supabase/migrations/202608120001_catalog.sql` en el SQL Editor.
+2. Para un proyecto nuevo, ejecuta las migraciones en orden: `supabase/migrations/202608120001_catalog.sql`, `202608120002_product_color_variants.sql` y `202608120003_space_proposals.sql`. Si el proyecto ya tiene catálogo y variantes, ejecuta únicamente la migración pendiente `202608120003_space_proposals.sql`.
 3. Crea el usuario propietario en **Authentication → Users** y añade su UUID a `public.profiles` con rol `admin`, siguiendo el comentario al final de la migración.
 4. Configura las cuatro variables de Supabase del archivo `.env.example`. En Vercel, las variables que comienzan con `VITE_` son públicas; la `SUPABASE_SERVICE_ROLE_KEY` es solo para el servidor.
 
@@ -29,6 +29,14 @@ Sin estas variables, el sitio conserva el catálogo de demostración y `/admin` 
 ### Variantes de color
 
 Cada producto puede incluir tonos exactos y una fotografía específica por color. El visitante ve el color seleccionado, el tono real y, cuando existe, la imagen correspondiente; si no existe, la interfaz indica que la foto es referencial. Para proyectos Supabase que ya ejecutaron la migración inicial, ejecuta también `supabase/migrations/202608120002_product_color_variants.sql` en el SQL Editor. Después, gestiona cada variante desde el bloque **Colores y variantes** de `/admin`.
+
+### Propuestas de espacio y fotos
+
+`/space` calcula la huella indicada en las dimensiones de cada pieza y reserva un margen conservador de circulación por categoría. Es una orientación comercial: la revisión final del showroom confirma puertas, ventanas y distribución. Al continuar, la propuesta se guarda en `public.space_proposals` antes de abrir WhatsApp; el propietario puede revisarlas en **Supabase → Table Editor → space_proposals**.
+
+En producción configura también `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en Vercel. `api/space-proposals.ts` registra los leads desde el servidor; la clave de servicio nunca se expone al navegador. En local, la función `submit_space_proposal` guarda el lead y vuelve a leer el catálogo publicado para que sus piezas, precios y dimensiones no dependan del navegador.
+
+Las nuevas fotos de productos y variantes se convierten en el navegador a WebP (máximo 1920 px) antes de subirse a Supabase Storage, con caché de un año. Esto reduce peso sin pedirle trabajo adicional al administrador.
 
 ## Asesoría IA de catálogo
 
