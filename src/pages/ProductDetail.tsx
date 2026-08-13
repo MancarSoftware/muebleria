@@ -7,6 +7,7 @@ import { whatsappLink } from '../config/business';
 import { useCatalog } from '../hooks/useCatalog';
 import { productColorVariants } from '../lib/colorVariants';
 import { useSpacePlanner } from '../hooks/useSpacePlanner';
+import { trackEvent } from '../lib/analytics';
 
 export function ProductDetail() {
   const { slug } = useParams();
@@ -39,6 +40,10 @@ export function ProductDetail() {
     return () => window.clearTimeout(timer);
   }, [activeImageUrl, galleryImages, hasImageCarousel]);
 
+  useEffect(() => {
+    if (product) trackEvent('view_item', { currency: 'USD', value: product.price, item_id: product.id, item_name: product.name, item_category: product.category });
+  }, [product?.id]);
+
   if (!product && isLoading) return <section className="empty"><p className="eyebrow">CATÁLOGO</p><h2>Buscando la pieza…</h2></section>;
   if (!product) return <section className="empty"><h1>Esta pieza ya no está disponible.</h1><Link to="/catalog">Volver al catálogo</Link></section>;
 
@@ -65,8 +70,8 @@ export function ProductDetail() {
           <div className="color-detail"><dt>Colores</dt><dd>{variants.length ? <div className="color-picker" role="radiogroup" aria-label="Selecciona un color">{variants.map((variant) => <button type="button" key={variant.id} className={variant.id === selectedVariant?.id ? 'selected' : ''} aria-checked={variant.id === selectedVariant?.id} role="radio" onClick={() => { setSelectedVariantId(variant.id); if (inSpace) planner.updateColor(product.id, variant.name); }} title={variant.name}><i style={{ backgroundColor: variant.hex }}/><span className="sr-only">{variant.name}</span></button>)}</div> : 'Consulta disponibilidad'}</dd></div>
         </dl>
         <CatalogAdvisor context={product} products={products}/>
-        <a className="dark-button full" href={whatsappLink(`Hola, me interesa ${product.name} en color ${selectedColorName}. La vi en el sitio web y quisiera más información.`)} target="_blank" rel="noreferrer">Consultar por WhatsApp</a>
-        <button className="save" onClick={() => inSpace ? planner.remove(product.id) : planner.add(product.id, selectedColorName)}><Heart fill={inSpace ? 'currentColor' : 'none'}/> {inSpace ? 'En mi espacio' : 'Añadir a mi espacio'}</button>
+        <a className="dark-button full" href={whatsappLink(`Hola, me interesa ${product.name} en color ${selectedColorName}. La vi en el sitio web y quisiera más información.`)} onClick={() => trackEvent('contact_whatsapp', { location: 'product_detail', item_id: product.id, item_name: product.name })} target="_blank" rel="noreferrer">Consultar por WhatsApp</a>
+        <button className="save" onClick={() => { if (inSpace) { planner.remove(product.id); trackEvent('remove_from_space', { item_id: product.id, item_name: product.name }); } else { planner.add(product.id, selectedColorName); trackEvent('add_to_space', { item_id: product.id, item_name: product.name, item_category: product.category, value: product.price, currency: 'USD' }); } }}><Heart fill={inSpace ? 'currentColor' : 'none'}/> {inSpace ? 'En mi espacio' : 'Añadir a mi espacio'}</button>
         <ul>{['Materiales seleccionados para durar', 'Entrega coordinada y atención personal', 'Asesoría para tu espacio'].map((item) => <li key={item}><Check/>{item}</li>)}</ul>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { useSpacePlanner } from '../hooks/useSpacePlanner';
 import { productColorVariants } from '../lib/colorVariants';
 import { estimateSpace } from '../lib/spacePlanning';
 import { saveSpaceProposal } from '../services/spaceProposals';
+import { trackEvent } from '../lib/analytics';
 
 const roomOptions = ['Sala', 'Comedor', 'Dormitorio', 'Oficina'] as const;
 type Room = typeof roomOptions[number];
@@ -73,6 +74,7 @@ export function SpacePlanner() {
         notes,
         website,
       });
+      trackEvent('generate_lead', { currency: 'USD', value: total, room_type: room, item_count: selectedItems.length });
       setSaveState('saved');
     } catch (error) {
       setSaveState('error');
@@ -116,7 +118,7 @@ export function SpacePlanner() {
         {selectedItems.length > 0 && <div className="space-feedback"><p><Check/><span><b>{budgetStatus === null ? 'Define un presupuesto' : budgetStatus ? 'La selección está dentro del presupuesto' : 'La selección supera el presupuesto'}</b>{budgetStatus === null ? 'Te ayudaremos a priorizar según tu inversión.' : budgetStatus ? ` Quedan $${(budgetValue! - total).toLocaleString('en-US')} para complementar.` : ` Ajustemos $${(total - budgetValue!).toLocaleString('en-US')} juntos.`}</span></p><p><MapPin/><span><b>{spaceHeading}</b>{spaceDetail}</span></p></div>}
         {selectedItems.length > 0 && <div className="proposal-contact"><p className="eyebrow">RECIBE LA PROPUESTA</p><div className="proposal-fields"><label>Nombre<input value={contactName} onChange={(event) => setContactName(event.target.value)} autoComplete="name" placeholder="Tu nombre"/></label><label>WhatsApp<input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} autoComplete="tel" inputMode="tel" placeholder="Ej. +593 99 000 0000"/></label><label>Correo <small>(opcional)</small><input value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} autoComplete="email" inputMode="email" placeholder="correo@ejemplo.com"/></label><label>Algo que debamos considerar <small>(opcional)</small><textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={2000} placeholder="Puertas, ventanas, fecha o acabados…"/></label><label className="proposal-honeypot" aria-hidden="true">Sitio web<input value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off"/></label></div></div>}
         {saveState === 'saved' ? <div className="proposal-success"><Check/><div><b>Tu propuesta quedó registrada.</b><span>Ahora puedes enviarla al showroom por WhatsApp.</span></div></div> : <button className="dark-button full" type="button" onClick={saveProposal} disabled={!selectedItems.length || saveState === 'saving'}>{saveState === 'saving' ? 'Guardando propuesta…' : 'Guardar y continuar'} <ArrowRight/></button>}
-        {saveState === 'saved' && <a className="dark-button full proposal-whatsapp" href={whatsappLink(message)} target="_blank" rel="noreferrer">Abrir WhatsApp con mi propuesta <ArrowRight/></a>}
+        {saveState === 'saved' && <a className="dark-button full proposal-whatsapp" href={whatsappLink(message)} onClick={() => trackEvent('contact_whatsapp', { location: 'space_proposal', item_count: selectedItems.length, value: total, currency: 'USD' })} target="_blank" rel="noreferrer">Abrir WhatsApp con mi propuesta <ArrowRight/></a>}
         {saveState === 'error' && <p className="proposal-error" role="alert">{saveError}</p>}
         <p className="space-note"><Clock3/> Te respondemos con disponibilidad, proporciones y una recomendación para tu {room.toLowerCase()}.</p>
       </aside>

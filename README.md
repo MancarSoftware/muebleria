@@ -50,9 +50,16 @@ El flujo [deploy-pages.yml](.github/workflows/deploy-pages.yml) publica la rama 
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_GA_MEASUREMENT_ID` (opcional; el ID público `G-...` de Google Analytics)
 
 El flujo compila con rutas hash para que enlaces como `/#/catalog` o `/#/admin` funcionen sin configuración de servidor. GitHub Pages no ejecuta las funciones de `api/`, por eso en esta demo las propuestas se guardan de forma segura mediante la función SQL de Supabase. La asesoría IA conserva su alternativa local hasta desplegarla en una plataforma con funciones serverless.
 
 ### Aviso por correo de propuestas
 
 Para recibir un email en `alemancar0511@gmail.com` cada vez que alguien guarda una propuesta, configura la función de Supabase incluida en [supabase/functions/notify-space-proposal](supabase/functions/notify-space-proposal). Necesitas una clave de Resend, que se mantiene exclusivamente en los secretos de Supabase. La guía exacta está en su [README](supabase/functions/notify-space-proposal/README.md).
+
+### Estadísticas de visitas con Google Analytics
+
+La integración se activa únicamente al definir `VITE_GA_MEASUREMENT_ID` con el ID público de una propiedad Google Analytics 4, por ejemplo `G-XXXXXXXXXX`. Además de visitas y páginas vistas, el sitio mide de forma anónima: `view_item`, `add_to_space`, `remove_from_space`, `generate_lead` y `contact_whatsapp`. Nunca se envían nombres, correos, teléfonos, notas ni el contenido de WhatsApp.
+
+En Google Analytics, crea una propiedad **Web**, copia el Measurement ID desde **Admin → Data streams**, guárdalo como el secreto `VITE_GA_MEASUREMENT_ID` en GitHub y vuelve a desplegar. Después marca `generate_lead` como **Key event** en **Admin → Events** para ver claramente cuántas visitas terminan en propuesta. [Guía oficial de instalación](https://support.google.com/analytics/answer/15756615) · [Eventos de lead recomendados](https://developers.google.com/analytics/devguides/collection/ga4/reference/events)

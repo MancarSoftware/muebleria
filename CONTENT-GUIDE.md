@@ -24,3 +24,7 @@ Esta plantilla permite reemplazar la identidad de un cliente sin rediseñar el s
 ## Demo en GitHub Pages
 
 Para publicar la demo se usa `.github/workflows/deploy-pages.yml`. Añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` como **GitHub Actions Secrets** y selecciona **GitHub Actions** como la fuente en GitHub Pages. El demo utiliza rutas hash y no necesita reglas especiales de redirección.
+
+## Analítica de visitas
+
+Crea una propiedad Google Analytics 4 y añade su Measurement ID público (`G-...`) como el secreto `VITE_GA_MEASUREMENT_ID` de GitHub Actions. Se miden visitas, páginas, productos vistos, piezas añadidas a **Mi espacio**, propuestas guardadas y aperturas de WhatsApp, sin enviar información personal del visitante. En GA4 marca `generate_lead` como **Key event**.

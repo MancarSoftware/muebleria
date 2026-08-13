@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { SpacePlannerProvider } from './hooks/useSpacePlanner';
+import { initializeAnalytics } from './lib/analytics';
 
 const Admin = lazy(() => import('./pages/Admin').then((module) => ({ default: module.Admin })));
 const About = lazy(() => import('./pages/About').then((module) => ({ default: module.About })));
@@ -24,6 +25,7 @@ function PublicSite() {
 }
 
 export default function App() {
+  initializeAnalytics();
   const Router = import.meta.env.VITE_ROUTER_MODE === 'hash' ? HashRouter : BrowserRouter;
   return <Router><SpacePlannerProvider><Suspense fallback={<PageLoading/>}><Routes><Route path="/admin" element={<Admin/>}/><Route path="*" element={<PublicSite/>}/></Routes></Suspense></SpacePlannerProvider></Router>;
 }
