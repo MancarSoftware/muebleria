@@ -1,6 +1,7 @@
-import { Activity, ArrowLeft, Check, DatabaseZap, Eye, ImagePlus, LoaderCircle, LogOut, MousePointerClick, PackagePlus, Pencil, Plus, RefreshCw, Trash2, UploadCloud, Users, X } from 'lucide-react';
+import { Activity, ArrowLeft, Check, ClipboardList, DatabaseZap, Eye, ImagePlus, LoaderCircle, LogOut, MousePointerClick, PackagePlus, Pencil, Plus, RefreshCw, Trash2, UploadCloud, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LeadInbox } from '../components/LeadInbox';
 import { legacyColorVariants } from '../lib/colorVariants';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { getRealtimeAnalytics, type AnalyticsDashboardError, type RealtimeAnalytics } from '../services/analyticsDashboard';
@@ -219,7 +220,7 @@ export function Admin() {
   if (!profile) return <main className="admin-shell admin-state"><p className="eyebrow">ACCESO RESTRINGIDO</p><h1>Tu cuenta todavía no tiene permisos de catálogo.</h1><p>Pide al administrador que añada tu usuario a la tabla <code>profiles</code> con rol <code>admin</code> o <code>editor</code>.</p><button className="dark-button" onClick={logout}>Cerrar sesión</button></main>;
 
   return <main className="admin-shell">
-    <header className="admin-header"><Link className="brand" to="/"><i>CN</i><span>Casa Nativa</span></Link><div><span>{profile.display_name || 'Administración'}</span><button onClick={logout}><LogOut/> Cerrar sesión</button></div></header>
+    <header className="admin-header"><Link className="brand" to="/"><i>CN</i><span>Casa Nativa</span></Link><div><span>{profile.display_name || 'Administración'}</span><button className="admin-leads-jump" type="button" onClick={() => document.getElementById('solicitudes')?.scrollIntoView({ behavior: 'smooth' })}><ClipboardList/> Solicitudes</button><button onClick={logout}><LogOut/> Cerrar sesión</button></div></header>
     <section className="admin-hero"><div><p className="eyebrow">CATÁLOGO PRIVADO</p><h1>Piezas que<br/><em>sí puedes gestionar.</em></h1></div><div><b>{publishedCount}</b><span>publicadas</span><b>{products.length - publishedCount}</b><span>en borrador</span></div></section>
     <AnalyticsPulse analytics={analytics} status={analyticsStatus} message={analyticsMessage} onRefresh={() => void loadAnalytics()}/>
     <div className="admin-layout">
@@ -231,6 +232,7 @@ export function Admin() {
       </aside>
       <ProductEditor product={selected} files={files} variantFiles={variantFiles} notice={notice} loading={loading} onChange={update} onFiles={setFiles} onVariants={updateVariants} onVariantFiles={setVariantFiles} onSubmit={submit} onDelete={remove} onRemoveImage={removeImage}/>
     </div>
+    <LeadInbox/>
   </main>;
 }
 
