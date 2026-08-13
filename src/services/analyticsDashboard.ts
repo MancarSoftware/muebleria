@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase';
 export type RealtimeAnalytics = {
   window: 'last_30_minutes';
   activeUsers: number;
+  visits: number;
   eventCount: number;
   pageViews: number;
+  interactions: number;
   topEvents: Array<{ name: string; count: number }>;
   topPages: Array<{ name: string; count: number }>;
   updatedAt: string;

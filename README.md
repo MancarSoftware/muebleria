@@ -20,7 +20,7 @@ npm run dev
 El propietario gestiona productos en `/admin`: crea borradores, sube fotos, edita textos y publica piezas. El sitio público y la asesoría IA solo leen productos publicados.
 
 1. Crea un proyecto Supabase en la cuenta del cliente.
-2. Para un proyecto nuevo, ejecuta las migraciones en orden: `supabase/migrations/202608120001_catalog.sql`, `202608120002_product_color_variants.sql`, `202608120003_space_proposals.sql` y `202608120004_site_analytics.sql`. Si el proyecto ya tiene catálogo y variantes, ejecuta las migraciones pendientes desde el SQL Editor de Supabase.
+2. Para un proyecto nuevo, ejecuta las migraciones en orden: `supabase/migrations/202608120001_catalog.sql`, `202608120002_product_color_variants.sql`, `202608120003_space_proposals.sql`, `202608120004_site_analytics.sql` y `202608120005_site_analytics_sessions.sql`. Si el proyecto ya tiene catálogo y variantes, ejecuta las migraciones pendientes desde el SQL Editor de Supabase.
 3. Crea el usuario propietario en **Authentication → Users** y añade su UUID a `public.profiles` con rol `admin`, siguiendo el comentario al final de la migración.
 4. Configura las cuatro variables de Supabase del archivo `.env.example`. Las variables que comienzan con `VITE_` son públicas; la `SUPABASE_SERVICE_ROLE_KEY` es solo para funciones de servidor.
 
@@ -66,6 +66,6 @@ En Google Analytics, crea una propiedad **Web**, copia el Measurement ID desde *
 
 ### Pulso en tiempo real sin Google Cloud
 
-El panel de `/admin` también puede mostrar actividad anónima de los últimos 30 minutos sin conectar ninguna API de Google ni contratar otro servicio. Ejecuta `supabase/migrations/202608120004_site_analytics.sql` en **Supabase → SQL Editor** y vuelve a publicar el sitio. No necesita una variable de entorno nueva.
+El panel de `/admin` también puede mostrar actividad anónima de los últimos 30 minutos sin conectar ninguna API de Google ni contratar otro servicio. Ejecuta `supabase/migrations/202608120004_site_analytics.sql` y `supabase/migrations/202608120005_site_analytics_sessions.sql` en **Supabase → SQL Editor** y vuelve a publicar el sitio. No necesita una variable de entorno nueva.
 
-Se registra únicamente un identificador anónimo temporal de la sesión, la ruta visitada y las interacciones permitidas: vistas, consulta de producto, favoritos, propuesta de espacio y WhatsApp. No se guardan nombres, correo, teléfono, mensajes, IP ni notas del visitante. Las filas no se pueden leer desde el navegador; el resumen agregado solo se entrega a perfiles `admin` o `editor`.
+Cada visita inicia una sesión anónima. Después de 30 minutos sin actividad, una nueva visita del mismo navegador comienza otra sesión y vuelve a contarse. El panel separa visitas, vistas de página e interacciones reales: consulta de producto, favoritos, propuesta de espacio y WhatsApp. No se guardan nombres, correo, teléfono, mensajes, IP ni notas del visitante. Las filas no se pueden leer desde el navegador; el resumen agregado solo se entrega a perfiles `admin` o `editor`.

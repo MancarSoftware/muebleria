@@ -9,18 +9,36 @@ declare global {
 
 const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
 const analyticsSessionKey = 'casa-nativa-analytics-session';
+const sessionInactivityMs = 30 * 60 * 1000;
 const supportedEvents = new Set(['page_view', 'view_item', 'add_to_space', 'remove_from_space', 'generate_lead', 'contact_whatsapp']);
+
+type AnalyticsSession = { id: string; lastActivityAt: number };
 
 function send(...args: unknown[]) {
   window.gtag?.(...args);
 }
 
-function sessionId() {
-  const existing = window.sessionStorage.getItem(analyticsSessionKey);
-  if (existing) return existing;
-  const next = crypto.randomUUID();
-  window.sessionStorage.setItem(analyticsSessionKey, next);
-  return next;
+function rememberSession(session: AnalyticsSession) {
+  try { window.sessionStorage.setItem(analyticsSessionKey, JSON.stringify(session)); } catch { /* Tracking remains anonymous if storage is unavailable. */ }
+}
+
+function getSession() {
+  const now = Date.now();
+  try {
+    const stored = window.sessionStorage.getItem(analyticsSessionKey);
+    const existing = stored ? JSON.parse(stored) as AnalyticsSession : null;
+    if (typeof existing?.id === 'string' && Number.isFinite(existing.lastActivityAt) && now - existing.lastActivityAt < sessionInactivityMs) {
+      const activeSession = { ...existing, lastActivityAt: now };
+      rememberSession(activeSession);
+      return { id: activeSession.id, isNew: false };
+    }
+  } catch {
+    // A malformed or blocked session storage entry simply starts a fresh anonymous visit.
+  }
+
+  const nextSession: AnalyticsSession = { id: crypto.randomUUID(), lastActivityAt: now };
+  rememberSession(nextSession);
+  return { id: nextSession.id, isNew: true };
 }
 
 function currentPath() {
@@ -44,14 +62,23 @@ function safeMetadata(parameters: Record<string, string | number | boolean | und
   };
 }
 
-function recordSiteEvent(name: string, pagePath: string, parameters: Record<string, string | number | boolean | undefined> = {}) {
-  if (!supabase || !supportedEvents.has(name)) return;
+function persistSiteEvent(name: string, pagePath: string, sessionId: string, parameters: Record<string, string | number | boolean | undefined> = {}) {
+  if (!supabase) return;
   void supabase.rpc('track_site_event', {
     p_event_name: name,
     p_page_path: pagePath.slice(0, 180),
-    p_session_id: sessionId(),
+    p_session_id: sessionId,
     p_metadata: safeMetadata(parameters),
+  }).then(({ error }) => {
+    if (error) console.warn('No se pudo registrar la actividad anónima del sitio.', error.code);
   });
+}
+
+function recordSiteEvent(name: string, pagePath: string, parameters: Record<string, string | number | boolean | undefined> = {}) {
+  if (!supabase || !supportedEvents.has(name)) return;
+  const session = getSession();
+  if (session.isNew) persistSiteEvent('session_start', pagePath, session.id);
+  persistSiteEvent(name, pagePath, session.id, parameters);
 }
 
 export function initializeAnalytics() {

@@ -238,12 +238,13 @@ function AnalyticsPulse({ analytics, status, message, onRefresh }: { analytics: 
   const updatedAt = analytics ? new Intl.DateTimeFormat('es-EC', { hour: '2-digit', minute: '2-digit' }).format(new Date(analytics.updatedAt)) : null;
   const values = analytics ? [
     { label: 'visitantes activos', value: analytics.activeUsers, icon: Users },
+    { label: 'visitas iniciadas', value: analytics.visits, icon: Activity },
     { label: 'vistas de página', value: analytics.pageViews, icon: Eye },
-    { label: 'interacciones', value: analytics.eventCount, icon: MousePointerClick },
+    { label: 'interacciones reales', value: analytics.interactions, icon: MousePointerClick },
   ] : [];
 
   return <section className="analytics-pulse" aria-live="polite">
-    <header className="analytics-pulse-head"><div><p className="eyebrow"><Activity/> PULSO DEL SITIO</p><h2>Lo que sucede <em>ahora.</em></h2><p>Actividad anónima de los últimos 30 minutos. Se actualiza cada 30 segundos.</p></div><button type="button" className="analytics-refresh" onClick={onRefresh} disabled={status === 'loading'}><RefreshCw className={status === 'loading' ? 'spin' : ''}/> Actualizar</button></header>
+    <header className="analytics-pulse-head"><div><p className="eyebrow"><Activity/> PULSO DEL SITIO</p><h2>Lo que sucede <em>ahora.</em></h2><p>Actividad anónima de los últimos 30 minutos. Una visita nueva comienza tras 30 minutos sin actividad.</p></div><button type="button" className="analytics-refresh" onClick={onRefresh} disabled={status === 'loading'}><RefreshCw className={status === 'loading' ? 'spin' : ''}/> Actualizar</button></header>
     {status === 'loading' && <div className="analytics-state"><LoaderCircle className="spin"/><span>Consultando la actividad del sitio…</span></div>}
     {status === 'not-configured' && <div className="analytics-state analytics-setup"><Activity/><div><b>Analítica lista para activar.</b><span>{message}</span><small>No requiere Google Cloud ni otra cuenta de pago.</small></div></div>}
     {status === 'error' && <div className="analytics-state analytics-error"><Activity/><div><b>No pudimos actualizar el pulso.</b><span>{message}</span></div></div>}
