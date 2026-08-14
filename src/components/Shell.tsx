@@ -50,5 +50,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Footer() {
-  return <footer className="site-footer"><div className="footer-top"><div className="footer-brand"><Link className="brand" to="/"><i>CN</i><span>{business.name}</span></Link><h2>Muebles que<br/>dejan espacio<br/>para <em>vivir.</em></h2><a className="footer-whatsapp" href={whatsappLink('Hola, quiero conversar sobre mi espacio.')} onClick={() => trackEvent('contact_whatsapp', { location: 'footer' })} target="_blank" rel="noreferrer"><MessageCircle/> Hablar por WhatsApp <span>↗</span></a></div><div className="footer-nav"><p className="footer-label">EXPLORAR</p><div>{footerLinks.map(([label, path]) => <Link key={path} to={path}>{label}</Link>)}</div></div><div className="footer-visit"><p className="footer-label">SHOWROOM</p><a href={business.mapsUrl} target="_blank" rel="noreferrer"><MapPin/>{business.address}</a><span>{business.hours}</span><a href={`tel:${business.phone}`}>{business.phone}</a><a href={`mailto:${business.email}`}>{business.email}</a></div><div className="footer-cta"><p className="footer-label">AGENDA UNA VISITA</p><p>Conversemos sobre tu espacio y probemos las piezas en persona.</p><Link to="/contact">Ir a contacto <span>↗</span></Link></div></div><div className="footer-bottom"><div className="social-links" aria-label="Redes sociales">{socials.map((social) => <a key={social.key} href={business.socials[social.key]} aria-label={`Visitar ${business.name} en ${social.label}`} target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={social.icon.path}/></svg></a>)}</div><small>© {new Date().getFullYear()} {business.name}. Todos los derechos reservados.</small><div className="footer-legal"><Link to="/privacy">Privacidad</Link><Link to="/terms">Términos</Link></div><span>Quito, Ecuador</span><span>Diseñado para habitar.</span></div></footer>;
+  return <footer className="site-footer">
+    <div className="footer-top">
+      <div className="footer-brand"><Link className="brand" to="/"><i>CN</i><span>{business.name}</span></Link><h2>Muebles que<br/>dejan espacio<br/>para <em>vivir.</em></h2><a className="footer-whatsapp" href={whatsappLink('Hola, quiero conversar sobre mi espacio.')} onClick={() => trackEvent('contact_whatsapp', { location: 'footer' })} target="_blank" rel="noreferrer"><MessageCircle/> Hablar por WhatsApp <span>↗</span></a></div>
+      <div className="footer-nav"><p className="footer-label">EXPLORAR</p><div>{footerLinks.map(([label, path]) => <Link key={path} to={path}>{label}</Link>)}</div></div>
+      <div className="footer-visit"><p className="footer-label">SHOWROOM</p><a href={business.mapsUrl} target="_blank" rel="noreferrer"><MapPin/>{business.address}</a><span>{business.hours}</span><a href={`tel:${business.phone}`}>{business.phone}</a><a href={`mailto:${business.email}`}>{business.email}</a></div>
+      <div className="footer-cta"><p className="footer-label">AGENDA UNA VISITA</p><p>Conversemos sobre tu espacio y probemos las piezas en persona.</p><Link to="/contact">Ir a contacto <span>↗</span></Link></div>
+    </div>
+    <div className="footer-bottom">
+      <div className="social-links" aria-label="Redes sociales">{socials.map((social) => <a key={social.key} href={business.socials[social.key]} aria-label={`Visitar ${business.name} en ${social.label}`} target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={social.icon.path}/></svg></a>)}</div>
+      <small>© {new Date().getFullYear()} {business.name}. Todos los derechos reservados.</small>
+      <div className="footer-legal"><Link to="/privacy">Privacidad</Link><Link to="/terms">Términos</Link></div>
+      <div className="footer-meta"><span>Quito, Ecuador</span><span>Diseñado para habitar.</span></div>
+    </div>
+  </footer>;
 }

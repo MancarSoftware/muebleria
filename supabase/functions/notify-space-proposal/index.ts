@@ -26,7 +26,7 @@ type DatabaseWebhook = { type?: string; table?: string; record?: Proposal };
 
 const destination = Deno.env.get('NOTIFICATION_EMAIL');
 const resendKey = Deno.env.get('RESEND_API_KEY');
-const sender = Deno.env.get('RESEND_FROM') ?? 'Casa Nativa Demo <onboarding@resend.dev>';
+const sender = Deno.env.get('RESEND_FROM') ?? 'Casa Nativa <onboarding@resend.dev>';
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]!);

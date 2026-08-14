@@ -1,13 +1,18 @@
-/* Isolated overrides for the privacy/terms additions. */
-.site-footer .footer-bottom{grid-template-columns:auto minmax(0,1fr) auto auto auto}
-.footer-legal{white-space:nowrap}
+/* Privacy and terms use the footer's established visual language without
+   letting legal links compete with the identity or collapse unpredictably. */
+.site-footer .footer-bottom{display:flex;align-items:center;flex-wrap:wrap;gap:16px 26px}
+.site-footer .footer-bottom small{flex:1 1 260px;justify-self:auto}
+.site-footer .footer-legal{display:flex;align-items:center;gap:13px;white-space:nowrap}
+.site-footer .footer-meta{display:flex;align-items:center;gap:18px;margin-left:auto;color:#aaaea2;font-size:10px;white-space:nowrap}
+.site-footer .footer-meta span:last-child{margin-left:0}
 
 @media(max-width:900px){
-  .site-footer .footer-bottom{grid-template-columns:auto minmax(0,1fr) auto}
-  .site-footer .footer-legal{grid-column:2/-1;justify-self:start}
+  .site-footer .footer-bottom{gap:15px 21px}
+  .site-footer .footer-bottom small{order:3;flex-basis:100%;justify-self:start}
+  .site-footer .footer-meta{margin-left:0}
 }
 
 @media(max-width:560px){
-  .site-footer .footer-bottom{grid-template-columns:1fr 1fr}
-  .site-footer .footer-legal{grid-column:1/-1;justify-self:start;order:3}
+  .site-footer .footer-bottom{align-items:flex-start;gap:14px 18px}
+  .site-footer .footer-meta{order:4;flex-basis:100%;justify-content:space-between;gap:8px;white-space:normal}
 }

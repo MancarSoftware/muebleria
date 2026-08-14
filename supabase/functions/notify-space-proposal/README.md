@@ -2,9 +2,9 @@
 
 Esta función recibe el webhook de inserciones en `public.space_proposals` y envía un correo al responsable mediante Resend. Incluye propuestas desde **Mi espacio** y consultas generales desde **Contacto**.
 
-## Configuración de demo
+## Configuración
 
-1. Crea una cuenta gratuita en Resend y verifica el correo destinatario `alemancar0511@gmail.com`. Para una demo se puede usar `onboarding@resend.dev` como remitente; para un dominio propio, verifícalo en Resend y configura `RESEND_FROM`.
+1. Crea una cuenta en Resend y verifica el correo destinatario `alemancar0511@gmail.com`. Antes del lanzamiento, verifica el dominio propio en Resend y configura `RESEND_FROM` con un remitente del negocio.
 2. En Supabase, abre **Edge Functions** y crea/despliega `notify-space-proposal` con el archivo `index.ts` de esta carpeta. Mantén **Verify JWT** activado.
 3. En **Edge Functions → Secrets**, añade:
    - `RESEND_API_KEY`

@@ -44,7 +44,7 @@ Las nuevas fotos de productos y variantes se convierten en el navegador a WebP (
 
 Para desarrollo local de la asesoría, usa un entorno que ejecute funciones Vercel (por ejemplo `vercel dev`) tras definir `OPENAI_API_KEY`. Sin ese servicio, la interfaz usa una coincidencia local del catálogo para conservar una experiencia útil sin inventar resultados.
 
-## Demo en GitHub Pages
+## Despliegue en GitHub Pages
 
 El flujo [deploy-pages.yml](.github/workflows/deploy-pages.yml) publica la rama `main` automáticamente. Antes del primer despliegue, en **GitHub → Settings → Pages**, selecciona **GitHub Actions** como fuente. En **Settings → Secrets and variables → Actions**, crea estos dos secretos con los valores públicos del proyecto Supabase:
 
@@ -52,11 +52,11 @@ El flujo [deploy-pages.yml](.github/workflows/deploy-pages.yml) publica la rama 
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_GA_MEASUREMENT_ID` (opcional; el ID público `G-...` de Google Analytics)
 
-El flujo compila con rutas hash para que enlaces como `/#/catalog` o `/#/admin` funcionen sin configuración de servidor. GitHub Pages no ejecuta las funciones de `api/`, por eso en esta demo las propuestas se guardan de forma segura mediante la función SQL de Supabase. La asesoría IA conserva su alternativa local hasta desplegarla en una plataforma con funciones serverless.
+El flujo compila con rutas hash para que enlaces como `/#/catalog` o `/#/admin` funcionen sin configuración de servidor. GitHub Pages no ejecuta las funciones de `api/`, por eso las propuestas se guardan de forma segura mediante la función SQL de Supabase. La asesoría IA conserva su alternativa local hasta desplegarla en una plataforma con funciones serverless.
 
 ### Privacidad y consentimiento
 
-Los dos formularios requieren una aceptación expresa de la Política de privacidad y guardan la versión aceptada junto a cada solicitud. Antes de usar el sitio para captar clientes reales, ejecuta `supabase/migrations/202608120009_record_lead_consent.sql` y revisa los textos de `/#/privacy` y `/#/terms` con asesoría jurídica local.
+Los dos formularios requieren una aceptación expresa de la Política de privacidad y guardan la versión aceptada junto a cada solicitud. Antes de captar clientes reales, ejecuta `supabase/migrations/202608120009_record_lead_consent.sql` y valida los textos de `/#/privacy` y `/#/terms` con asesoría jurídica local.
 
 ### Aviso por correo de solicitudes
 
