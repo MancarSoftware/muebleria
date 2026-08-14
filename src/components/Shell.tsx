@@ -17,6 +17,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const planner = useSpacePlanner();
   const isHome = location.pathname === '/';
+  const hasOliveHeader = isHome || ['/contact', '/privacy', '/terms'].includes(location.pathname);
 
   useEffect(() => {
     const update = () => setScrolled(scrollY > 24);
@@ -34,7 +35,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [location.pathname, location.search]);
 
   return <>
-    <header className={`site-header ${!isHome ? 'header-light' : ''} ${scrolled ? 'header-scrolled' : ''}`}>
+    <header className={`site-header ${!hasOliveHeader ? 'header-light' : ''} ${scrolled ? 'header-scrolled' : ''}`}>
       <Link className="brand" to="/"><i>CN</i><span>{business.name}</span></Link>
       <nav aria-label="Navegación principal">{links.map(([name, path]) => <NavLink key={path} to={path}>{name}</NavLink>)}</nav>
       <div className="actions">
