@@ -51,7 +51,7 @@ function mapLead(row: LeadRow): Lead {
 
 export async function getLeads(): Promise<Lead[]> {
   if (!supabase) throw new Error('Supabase is not configured.');
-  const { data, error } = await supabase.from('space_proposals').select('id, created_at, updated_at, status, source, room_type, room_width_cm, room_depth_cm, budget, total_price, required_area_sqm, furniture_footprint_sqm, items, contact_name, contact_phone, contact_email, notes').order('updated_at', { ascending: false }).limit(100);
+  const { data, error } = await supabase.from('space_proposals').select('id, created_at, updated_at, status, source, room_type, room_width_cm, room_depth_cm, budget, total_price, required_area_sqm, furniture_footprint_sqm, items, contact_name, contact_phone, contact_email, notes').order('updated_at', { ascending: false }).limit(500);
   if (error) throw error;
   return (data as LeadRow[]).map(mapLead);
 }

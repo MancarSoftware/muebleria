@@ -20,7 +20,7 @@ npm run dev
 El propietario gestiona productos en `/admin`: crea borradores, sube fotos, edita textos y publica piezas. El sitio público y la asesoría IA solo leen productos publicados.
 
 1. Crea un proyecto Supabase en la cuenta del cliente.
-2. Para un proyecto nuevo, ejecuta las migraciones en orden: `supabase/migrations/202608120001_catalog.sql`, `202608120002_product_color_variants.sql`, `202608120003_space_proposals.sql`, `202608120004_site_analytics.sql`, `202608120005_site_analytics_sessions.sql`, `202608120006_lead_inbox.sql` y `202608120007_contact_inquiries.sql`. Si el proyecto ya tiene catálogo y variantes, ejecuta las migraciones pendientes desde el SQL Editor de Supabase.
+2. Para un proyecto nuevo, ejecuta las migraciones en orden: `supabase/migrations/202608120001_catalog.sql`, `202608120002_product_color_variants.sql`, `202608120003_space_proposals.sql`, `202608120004_site_analytics.sql`, `202608120005_site_analytics_sessions.sql`, `202608120006_lead_inbox.sql`, `202608120007_contact_inquiries.sql` y `202608120008_ecuador_phone_validation.sql`. Si el proyecto ya tiene catálogo y variantes, ejecuta las migraciones pendientes desde el SQL Editor de Supabase.
 3. Crea el usuario propietario en **Authentication → Users** y añade su UUID a `public.profiles` con rol `admin`, siguiendo el comentario al final de la migración.
 4. Configura las cuatro variables de Supabase del archivo `.env.example`. Las variables que comienzan con `VITE_` son públicas; la `SUPABASE_SERVICE_ROLE_KEY` es solo para funciones de servidor.
 

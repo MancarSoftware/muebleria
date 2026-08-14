@@ -31,8 +31,8 @@ function ContactForm() {
     const roomType = String(data.get('space') ?? '');
     const message = String(data.get('message') ?? '');
 
-    if (!name.trim() || !roomType || message.trim().length < 8 || !/^\d{7,15}$/.test(phone) || !isComEmail(email)) {
-      setError('Revisa los campos: teléfono solo con números y correo con @ y .com.');
+    if (!name.trim() || !roomType || message.trim().length < 8 || !/^\d{10}$/.test(phone) || !isComEmail(email)) {
+      setError('Revisa los campos: teléfono ecuatoriano de 10 números y correo con @ y .com.');
       return;
     }
 
@@ -53,7 +53,7 @@ function ContactForm() {
     {sent ? <div className="success"><Send/><h2>Consulta recibida.</h2><p>Ya llegó al equipo de Casa Nativa. {business.responseTime}</p></div> : <>
       <label>Nombre<input name="name" placeholder="Tu nombre" minLength={2} maxLength={100} required/></label>
       <label>Correo electrónico<input name="email" type="email" inputMode="email" placeholder="nombre@correo.com" maxLength={254} required onInput={(event) => event.currentTarget.setCustomValidity('')}/></label>
-      <label>Teléfono<input name="phone" type="tel" inputMode="numeric" placeholder="Ej. 0986951419" pattern="[0-9]{7,15}" maxLength={15} required onInput={(event) => { event.currentTarget.value = onlyDigits(event.currentTarget.value); event.currentTarget.setCustomValidity(''); }}/></label>
+      <label>Teléfono<input name="phone" type="tel" inputMode="numeric" placeholder="Ej. 0986951419" pattern="[0-9]{10}" maxLength={10} required onInput={(event) => { event.currentTarget.value = onlyDigits(event.currentTarget.value); event.currentTarget.setCustomValidity(''); }}/></label>
       <label>¿Qué espacio estás trabajando?<select name="space" defaultValue="" required><option value="" disabled>Selecciona una opción</option><option>Sala</option><option>Dormitorio</option><option>Comedor</option><option>Estudio</option><option>Otro</option></select></label>
       <label>Cuéntanos un poco más<textarea name="message" placeholder="Medidas aproximadas, piezas que necesitas, estilo o presupuesto…" minLength={8} maxLength={2000} required/></label>
       {error && <p className="error" role="alert">{error}</p>}

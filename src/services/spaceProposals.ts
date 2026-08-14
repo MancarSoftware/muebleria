@@ -48,7 +48,7 @@ function rpcPayload(input: SpaceProposalInput) {
 export async function saveSpaceProposal(input: SpaceProposalInput): Promise<SaveResult> {
   if (input.website) throw new Error('No se pudo registrar la propuesta.');
   if (!input.items.length || input.contactName.trim().length < 2 || !isValidPhone(input.contactPhone.trim())) {
-    throw new Error('Completa tu nombre y un número de WhatsApp válido.');
+    throw new Error('Completa tu nombre y un WhatsApp ecuatoriano de 10 números.');
   }
   if (input.contactEmail?.trim() && !isComEmail(input.contactEmail)) {
     throw new Error('Escribe un correo válido que incluya @ y .com.');

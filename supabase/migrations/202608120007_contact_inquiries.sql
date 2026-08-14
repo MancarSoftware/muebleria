@@ -35,7 +35,7 @@ declare
 begin
   if char_length(v_room_type) not between 2 and 40
     or char_length(v_name) not between 2 and 100
-    or v_phone !~ '^[0-9]{7,15}$'
+    or v_phone !~ '^[0-9]{10}$'
     or v_email !~* '^[^[:space:]@]+@[^[:space:]@]+[.]com$'
     or char_length(v_notes) not between 8 and 2000 then
     raise exception 'Invalid contact inquiry' using errcode = '22023';

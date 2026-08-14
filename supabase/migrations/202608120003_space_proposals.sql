@@ -12,7 +12,7 @@ create table if not exists public.space_proposals (
   furniture_footprint_sqm numeric check (furniture_footprint_sqm is null or furniture_footprint_sqm >= 0),
   items jsonb not null check (jsonb_typeof(items) = 'array' and jsonb_array_length(items) between 1 and 20),
   contact_name text not null check (char_length(contact_name) between 2 and 100),
-  contact_phone text not null check (char_length(contact_phone) between 7 and 40),
+  contact_phone text not null check (contact_phone ~ '^[0-9]{10}$'),
   contact_email text check (contact_email is null or char_length(contact_email) <= 254),
   notes text check (notes is null or char_length(notes) <= 2000)
 );
@@ -57,7 +57,7 @@ declare
   v_id uuid;
 begin
   if coalesce(char_length(trim(p_contact_name)), 0) < 2
-    or coalesce(char_length(trim(p_contact_phone)), 0) < 7
+    or trim(coalesce(p_contact_phone, '')) !~ '^[0-9]{10}$'
     or coalesce(char_length(trim(p_room_type)), 0) < 2
     or coalesce(jsonb_typeof(p_items), '') <> 'array'
     or jsonb_array_length(p_items) not between 1 and 20 then

@@ -1,6 +1,6 @@
 const emailComPattern = /^[^\s@]+@[^\s@]+\.com$/i;
 
-export function onlyDigits(value: string, maxLength = 15) {
+export function onlyDigits(value: string, maxLength = 10) {
   return value.replace(/\D/g, '').slice(0, maxLength);
 }
 
@@ -11,7 +11,7 @@ export function onlyDecimal(value: string) {
 }
 
 export function isValidPhone(value: string) {
-  return /^\d{7,15}$/.test(value);
+  return /^\d{10}$/.test(value);
 }
 
 export function isComEmail(value: string) {

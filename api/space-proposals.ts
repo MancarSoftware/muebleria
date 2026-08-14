@@ -14,12 +14,12 @@ export default async function handler(request: Request, response: Response) {
   if (request.method !== 'POST') return response.status(405).json({ message: 'Method not allowed.' });
   const proposal = request.body;
   const name = text(proposal?.contactName, 100);
-  const phone = text(proposal?.contactPhone, 40);
+  const phone = text(proposal?.contactPhone, 10);
   const items = Array.isArray(proposal?.items) ? proposal.items.slice(0, 20) : [];
   if (text(proposal?.website)) return response.status(204).json({ id: 'ignored' });
   const productIds = items.map((item) => text(item.productId, 100));
-  if (name.length < 2 || phone.length < 7 || !items.length || new Set(productIds).size !== items.length || !productIds.every(isUuid)) {
-    return response.status(400).json({ message: 'Completa los datos de contacto y al menos una pieza.' });
+  if (name.length < 2 || !/^\d{10}$/.test(phone) || !items.length || new Set(productIds).size !== items.length || !productIds.every(isUuid)) {
+    return response.status(400).json({ message: 'Completa un WhatsApp ecuatoriano de 10 números y al menos una pieza.' });
   }
 
   const url = process.env.SUPABASE_URL;

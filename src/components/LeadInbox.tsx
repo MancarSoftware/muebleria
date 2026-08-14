@@ -1,4 +1,4 @@
-import { Check, ChevronRight, ClipboardList, LoaderCircle, Mail, MessageCircle, RefreshCw, Send, StickyNote } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ClipboardList, LoaderCircle, Mail, MessageCircle, RefreshCw, Send, StickyNote } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getLeads, updateLead, type Lead, type LeadStatus } from '../services/leads';
 
@@ -12,6 +12,7 @@ const statusLabels: Record<LeadStatus, string> = {
 
 const statusOptions = Object.entries(statusLabels) as Array<[LeadStatus, string]>;
 type LeadFilter = 'all' | LeadStatus;
+const pageSize = 7;
 
 const filterLabels: Record<LeadFilter, string> = {
   new: 'Nuevas',
@@ -26,6 +27,13 @@ const dateTime = new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium', timeSty
 
 function matchesFilter(lead: Lead, filter: LeadFilter) {
   return filter === 'all' || lead.status === filter;
+}
+
+function pageFor(leads: Lead[], filter: LeadFilter, requestedPage: number) {
+  const items = leads.filter((lead) => matchesFilter(lead, filter));
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const page = Math.min(Math.max(requestedPage, 0), totalPages - 1);
+  return { items: items.slice(page * pageSize, (page + 1) * pageSize), page, totalPages, total: items.length };
 }
 
 function whatsappForLead(lead: Lead) {
@@ -48,6 +56,7 @@ export function LeadInbox() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<LeadFilter>('new');
+  const [pageByFilter, setPageByFilter] = useState<Record<LeadFilter, number>>({ all: 0, new: 0, contacted: 0, qualified: 0, closed: 0, archived: 0 });
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,7 +64,7 @@ export function LeadInbox() {
   const [saveConfirmation, setSaveConfirmation] = useState('');
 
   const selected = leads.find((lead) => lead.id === selectedId) ?? null;
-  const visibleLeads = useMemo(() => leads.filter((lead) => matchesFilter(lead, filter)), [filter, leads]);
+  const leadPage = useMemo(() => pageFor(leads, filter, pageByFilter[filter]), [filter, leads, pageByFilter]);
   const summary = useMemo(() => ({ total: leads.length, new: leads.filter((lead) => lead.status === 'new').length, active: leads.filter((lead) => lead.status === 'contacted' || lead.status === 'qualified').length, closed: leads.filter((lead) => lead.status === 'closed').length }), [leads]);
 
   const loadLeads = async () => {
@@ -63,9 +72,11 @@ export function LeadInbox() {
     try {
       const nextLeads = await getLeads();
       setLeads(nextLeads);
+      const nextPage = pageFor(nextLeads, filter, pageByFilter[filter]);
+      setPageByFilter((current) => ({ ...current, [filter]: nextPage.page }));
       setSelectedId((current) => {
         const currentLead = nextLeads.find((lead) => lead.id === current);
-        return currentLead && matchesFilter(currentLead, filter) ? currentLead.id : nextLeads.find((lead) => matchesFilter(lead, filter))?.id ?? null;
+        return currentLead && nextPage.items.some((lead) => lead.id === currentLead.id) ? currentLead.id : nextPage.items[0]?.id ?? null;
       });
     } catch (error) {
       const detail = error as { code?: string; message?: string };
@@ -78,7 +89,16 @@ export function LeadInbox() {
 
   const changeFilter = (nextFilter: LeadFilter) => {
     setFilter(nextFilter);
-    setSelectedId(leads.find((lead) => matchesFilter(lead, nextFilter))?.id ?? null);
+    const nextPage = pageFor(leads, nextFilter, pageByFilter[nextFilter]);
+    setPageByFilter((current) => ({ ...current, [nextFilter]: nextPage.page }));
+    setSelectedId(nextPage.items[0]?.id ?? null);
+    setSaveConfirmation('');
+  };
+
+  const changePage = (nextPageNumber: number) => {
+    const nextPage = pageFor(leads, filter, nextPageNumber);
+    setPageByFilter((current) => ({ ...current, [filter]: nextPage.page }));
+    setSelectedId(nextPage.items[0]?.id ?? null);
     setSaveConfirmation('');
   };
 
@@ -90,8 +110,10 @@ export function LeadInbox() {
       setNote('');
       const nextLeads = leads.map((lead) => lead.id === selected.id ? { ...lead, status, updatedAt: new Date().toISOString() } : lead);
       setLeads(nextLeads);
+      const nextPage = pageFor(nextLeads, filter, pageByFilter[filter]);
+      setPageByFilter((current) => ({ ...current, [filter]: nextPage.page }));
       if (filter !== 'all' && filter !== status) {
-        setSelectedId(nextLeads.find((lead) => matchesFilter(lead, filter))?.id ?? null);
+        setSelectedId(nextPage.items[0]?.id ?? null);
       } else {
         setSaveConfirmation('Seguimiento guardado.');
       }
@@ -105,7 +127,7 @@ export function LeadInbox() {
     {error && <p className="lead-notice">{error}</p>}
     {loading && !leads.length ? <div className="lead-loading"><LoaderCircle className="spin"/> Cargando solicitudes…</div> : <div className="lead-layout">
       <aside className="lead-list" aria-label="Lista de solicitudes">
-        {visibleLeads.length ? visibleLeads.map((lead) => <button type="button" key={lead.id} className={lead.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(lead.id)}><span className={`lead-status ${lead.status}`}>{statusLabels[lead.status]}</span><b>{lead.contactName}</b><small>{leadSummary(lead)}</small><time>{dateTime.format(new Date(lead.updatedAt))}</time><ChevronRight/></button>) : <div className="lead-empty"><ClipboardList/><b>No hay solicitudes {filterLabels[filter].toLowerCase()}.</b><span>Cuando haya una propuesta en esta etapa, aparecerá en esta lista.</span></div>}
+        {leadPage.total ? <>{leadPage.items.map((lead) => <button type="button" key={lead.id} className={lead.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(lead.id)}><span className={`lead-status ${lead.status}`}>{statusLabels[lead.status]}</span><b>{lead.contactName}</b><small>{leadSummary(lead)}</small><time>{dateTime.format(new Date(lead.updatedAt))}</time><ChevronRight/></button>)}{leadPage.totalPages > 1 && <nav className="lead-pagination" aria-label="Paginación de solicitudes"><button type="button" onClick={() => changePage(leadPage.page - 1)} disabled={leadPage.page === 0}><ChevronLeft/> Anterior</button><span>Página {leadPage.page + 1} de {leadPage.totalPages}</span><button type="button" onClick={() => changePage(leadPage.page + 1)} disabled={leadPage.page + 1 === leadPage.totalPages}>Siguiente <ChevronRight/></button></nav>}</> : <div className="lead-empty"><ClipboardList/><b>No hay solicitudes {filterLabels[filter].toLowerCase()}.</b><span>Cuando haya una propuesta en esta etapa, aparecerá en esta lista.</span></div>}
       </aside>
       {selected ? <article className="lead-detail">
         <header><div><span className={`lead-status ${selected.status}`}>{statusLabels[selected.status]}</span><h3>{selected.contactName}</h3><time>Recibida {dateTime.format(new Date(selected.createdAt))}</time></div><select value={selected.status} onChange={(event) => void saveLead(event.target.value as LeadStatus)} disabled={saving}>{statusOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></header>

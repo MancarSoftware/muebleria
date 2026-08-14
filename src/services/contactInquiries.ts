@@ -16,7 +16,7 @@ export async function saveContactInquiry(input: ContactInquiryInput) {
   const message = input.message.trim();
 
   if (name.length < 2 || !isValidPhone(phone) || !isComEmail(email) || input.roomType.trim().length < 2 || message.length < 8) {
-    throw new Error('Revisa los datos de tu consulta antes de enviarla.');
+    throw new Error('Revisa los datos: usa un WhatsApp ecuatoriano de 10 números y un correo con @ y .com.');
   }
   if (!supabase) throw new Error('El registro de consultas aún no está configurado.');
 
