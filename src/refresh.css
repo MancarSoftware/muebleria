@@ -325,7 +325,10 @@ main { overflow: clip; }
 .room-actions { gap: 14px; }
 .room-actions > a:not(.dark-button) { padding: 9px 0; color: var(--olive); }
 .collection-curated { padding: 28px; background: #edf2e8; border: 1px solid #d9e4d2; border-radius: 24px; }
-.collection-curated .room-products { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.collection-curated > div:first-child { display: flex; align-items: center; justify-content: space-between; min-height: 68px; gap: 20px; padding: 0 6px 21px; }
+.collection-curated > div:first-child .eyebrow { margin: 0; }
+.collection-curated > div:first-child > span { color: #6a756b; font: 12px var(--sans); white-space: nowrap; }
+.collection-curated .room-products { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 0; clear: both; }
 .collection-curated .room-products .product-card:nth-child(2) { transform: translateY(22px); }
 .collection-curated .room-products .product-card img { height: 330px; }
 
@@ -471,6 +474,8 @@ main { overflow: clip; }
   .collection-guide, .space-guide, .inspiration-hub, .story-list { padding-top: 75px; padding-bottom: 80px; }
   .collection-intro > img, .room-intro > img, .story-list img { border-radius: 19px; }
   .collection-curated { padding: 14px; border-radius: 18px; }
+  .collection-curated > div:first-child { display: block; min-height: 0; padding: 4px 5px 18px; }
+  .collection-curated > div:first-child > span { display: block; margin-top: 7px; }
   .collection-curated .room-products { grid-template-columns: 1fr; gap: 26px; }
   .collection-curated .room-products .product-card img { height: 390px; }
   .featured-guide { border-radius: 20px; }
