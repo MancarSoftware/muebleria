@@ -1,6 +1,6 @@
 import { Check, ChevronRight, ClipboardList, LoaderCircle, Mail, MessageCircle, RefreshCw, Send, StickyNote } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { getLeadActivities, getLeads, updateLead, type Lead, type LeadActivity, type LeadStatus } from '../services/leads';
+import { getLeads, updateLead, type Lead, type LeadStatus } from '../services/leads';
 
 const statusLabels: Record<LeadStatus, string> = {
   new: 'Nuevo',
@@ -21,15 +21,9 @@ function whatsappForLead(lead: Lead) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(`Hola ${lead.contactName}, soy de Casa Nativa. Revisé tu propuesta para ${lead.roomType.toLowerCase()} con ${pieces}. ¿Te parece si la vemos juntos?`)}`;
 }
 
-function activityDescription(activity: LeadActivity) {
-  if (activity.activityType === 'note') return activity.note;
-  return `Estado: ${statusLabels[activity.fromStatus ?? 'new']} → ${statusLabels[activity.toStatus ?? 'new']}`;
-}
-
 export function LeadInbox() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [filter, setFilter] = useState<'all' | LeadStatus>('all');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
@@ -40,10 +34,6 @@ export function LeadInbox() {
   const selected = leads.find((lead) => lead.id === selectedId) ?? null;
   const visibleLeads = useMemo(() => filter === 'all' ? leads : leads.filter((lead) => lead.status === filter), [filter, leads]);
   const summary = useMemo(() => ({ total: leads.length, new: leads.filter((lead) => lead.status === 'new').length, active: leads.filter((lead) => lead.status === 'contacted' || lead.status === 'qualified').length, closed: leads.filter((lead) => lead.status === 'closed').length }), [leads]);
-
-  const loadActivities = async (proposalId: string) => {
-    try { setActivities(await getLeadActivities(proposalId)); } catch { setActivities([]); }
-  };
 
   const loadLeads = async () => {
     setLoading(true); setError('');
@@ -58,7 +48,7 @@ export function LeadInbox() {
   };
 
   useEffect(() => { void loadLeads(); }, []);
-  useEffect(() => { if (selectedId) { setNote(''); void loadActivities(selectedId); } else setActivities([]); }, [selectedId]);
+  useEffect(() => { setNote(''); }, [selectedId]);
 
   const saveLead = async (status: LeadStatus) => {
     if (!selected) return;
@@ -68,7 +58,6 @@ export function LeadInbox() {
       setNote('');
       setLeads((current) => current.map((lead) => lead.id === selected.id ? { ...lead, status, updatedAt: new Date().toISOString() } : lead));
       if (filter !== 'all' && filter !== status) setFilter('all');
-      await loadActivities(selected.id);
       setSaveConfirmation('Seguimiento guardado.');
     } catch (error) { setError(error instanceof Error ? error.message : 'No pudimos guardar el seguimiento.'); }
     finally { setSaving(false); }
@@ -89,7 +78,6 @@ export function LeadInbox() {
         <section className="lead-pieces"><p className="eyebrow">PIEZAS SOLICITADAS</p>{selected.items.map((item) => <div key={item.productId}><span><b>{item.name}</b>{item.colorName && <small>{item.colorName}</small>}</span><span>{money.format(item.price)}</span></div>)}</section>
         {selected.notes && <section className="lead-client-note"><p className="eyebrow">NOTA DEL CLIENTE</p><p>{selected.notes}</p></section>}
         <section className="lead-followup"><p className="eyebrow"><StickyNote/> SEGUIMIENTO PRIVADO</p><textarea value={note} maxLength={1000} onChange={(event) => setNote(event.target.value)} placeholder="Ej. Hablamos por WhatsApp; enviar alternativa en madera clara."/><button type="button" className="dark-button" onClick={() => void saveLead(selected.status)} disabled={saving}>{saving ? <LoaderCircle className="spin"/> : <><Send/> Guardar seguimiento</>}</button>{saveConfirmation && <p className="lead-save-confirmation" role="status"><Check/> {saveConfirmation}</p>}</section>
-        <section className="lead-history"><p className="eyebrow">HISTORIAL</p>{activities.length ? activities.map((activity) => <div key={activity.id}><Check/><span>{activityDescription(activity)}</span><time>{dateTime.format(new Date(activity.createdAt))}</time></div>) : <span>No hay seguimientos todavía.</span>}</section>
       </article> : <div className="lead-detail lead-detail-empty"><ClipboardList/><h3>Elige una solicitud</h3><p>Selecciona una conversación para revisar la propuesta y continuar el seguimiento.</p></div>}
     </div>}
   </section>;
