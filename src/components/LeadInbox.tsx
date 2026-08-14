@@ -11,8 +11,22 @@ const statusLabels: Record<LeadStatus, string> = {
 };
 
 const statusOptions = Object.entries(statusLabels) as Array<[LeadStatus, string]>;
+type LeadFilter = 'all' | LeadStatus;
+
+const filterLabels: Record<LeadFilter, string> = {
+  new: 'Nuevas',
+  contacted: 'Contactadas',
+  qualified: 'Propuestas en curso',
+  closed: 'Cerradas',
+  archived: 'Archivadas',
+  all: 'Todas las solicitudes',
+};
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const dateTime = new Intl.DateTimeFormat('es-EC', { dateStyle: 'medium', timeStyle: 'short' });
+
+function matchesFilter(lead: Lead, filter: LeadFilter) {
+  return filter === 'all' || lead.status === filter;
+}
 
 function whatsappForLead(lead: Lead) {
   const rawPhone = lead.contactPhone.replace(/\D/g, '');
@@ -24,7 +38,7 @@ function whatsappForLead(lead: Lead) {
 export function LeadInbox() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | LeadStatus>('all');
+  const [filter, setFilter] = useState<LeadFilter>('new');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,7 +46,7 @@ export function LeadInbox() {
   const [saveConfirmation, setSaveConfirmation] = useState('');
 
   const selected = leads.find((lead) => lead.id === selectedId) ?? null;
-  const visibleLeads = useMemo(() => filter === 'all' ? leads : leads.filter((lead) => lead.status === filter), [filter, leads]);
+  const visibleLeads = useMemo(() => leads.filter((lead) => matchesFilter(lead, filter)), [filter, leads]);
   const summary = useMemo(() => ({ total: leads.length, new: leads.filter((lead) => lead.status === 'new').length, active: leads.filter((lead) => lead.status === 'contacted' || lead.status === 'qualified').length, closed: leads.filter((lead) => lead.status === 'closed').length }), [leads]);
 
   const loadLeads = async () => {
@@ -40,7 +54,10 @@ export function LeadInbox() {
     try {
       const nextLeads = await getLeads();
       setLeads(nextLeads);
-      setSelectedId((current) => nextLeads.some((lead) => lead.id === current) ? current : nextLeads[0]?.id ?? null);
+      setSelectedId((current) => {
+        const currentLead = nextLeads.find((lead) => lead.id === current);
+        return currentLead && matchesFilter(currentLead, filter) ? currentLead.id : nextLeads.find((lead) => matchesFilter(lead, filter))?.id ?? null;
+      });
     } catch (error) {
       const detail = error as { code?: string; message?: string };
       setError(detail.code === '42703' || detail.code === '42P01' ? 'Activa la bandeja de solicitudes con la migración 202608120006 en Supabase.' : 'No pudimos cargar las solicitudes. Revisa los permisos de Supabase.');
@@ -50,26 +67,36 @@ export function LeadInbox() {
   useEffect(() => { void loadLeads(); }, []);
   useEffect(() => { setNote(''); }, [selectedId]);
 
+  const changeFilter = (nextFilter: LeadFilter) => {
+    setFilter(nextFilter);
+    setSelectedId(leads.find((lead) => matchesFilter(lead, nextFilter))?.id ?? null);
+    setSaveConfirmation('');
+  };
+
   const saveLead = async (status: LeadStatus) => {
     if (!selected) return;
     setSaving(true); setError(''); setSaveConfirmation('');
     try {
       await updateLead(selected.id, status, note);
       setNote('');
-      setLeads((current) => current.map((lead) => lead.id === selected.id ? { ...lead, status, updatedAt: new Date().toISOString() } : lead));
-      if (filter !== 'all' && filter !== status) setFilter('all');
-      setSaveConfirmation('Seguimiento guardado.');
+      const nextLeads = leads.map((lead) => lead.id === selected.id ? { ...lead, status, updatedAt: new Date().toISOString() } : lead);
+      setLeads(nextLeads);
+      if (filter !== 'all' && filter !== status) {
+        setSelectedId(nextLeads.find((lead) => matchesFilter(lead, filter))?.id ?? null);
+      } else {
+        setSaveConfirmation('Seguimiento guardado.');
+      }
     } catch (error) { setError(error instanceof Error ? error.message : 'No pudimos guardar el seguimiento.'); }
     finally { setSaving(false); }
   };
 
   return <section className="lead-inbox" id="solicitudes" aria-labelledby="lead-inbox-title">
     <header className="lead-inbox-head"><div><p className="eyebrow"><ClipboardList/> SOLICITUDES</p><h2 id="lead-inbox-title">Conversaciones que<br/><em>importan.</em></h2><p>Propuestas enviadas desde el sitio. Gestiona el seguimiento sin salir de tu catálogo.</p></div><div className="lead-summary"><span><b>{summary.total}</b> solicitudes</span><span><b>{summary.new}</b> nuevas</span><span><b>{summary.active}</b> en curso</span><span><b>{summary.closed}</b> cerradas</span></div></header>
-    <div className="lead-toolbar"><label>Ver<select value={filter} onChange={(event) => setFilter(event.target.value as 'all' | LeadStatus)}><option value="all">Todas las solicitudes</option>{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><button type="button" onClick={() => void loadLeads()} disabled={loading}><RefreshCw className={loading ? 'spin' : ''}/> Actualizar</button></div>
+    <div className="lead-toolbar"><label>Ver<select value={filter} onChange={(event) => changeFilter(event.target.value as LeadFilter)}>{(Object.keys(filterLabels) as LeadFilter[]).map((value) => <option key={value} value={value}>{filterLabels[value]}{value === 'new' ? ` (${summary.new})` : ''}</option>)}</select></label><button type="button" onClick={() => void loadLeads()} disabled={loading}><RefreshCw className={loading ? 'spin' : ''}/> Actualizar</button></div>
     {error && <p className="lead-notice">{error}</p>}
     {loading && !leads.length ? <div className="lead-loading"><LoaderCircle className="spin"/> Cargando solicitudes…</div> : <div className="lead-layout">
       <aside className="lead-list" aria-label="Lista de solicitudes">
-        {visibleLeads.length ? visibleLeads.map((lead) => <button type="button" key={lead.id} className={lead.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(lead.id)}><span className={`lead-status ${lead.status}`}>{statusLabels[lead.status]}</span><b>{lead.contactName}</b><small>{lead.roomType} · {lead.items.length} {lead.items.length === 1 ? 'pieza' : 'piezas'}</small><time>{dateTime.format(new Date(lead.updatedAt))}</time><ChevronRight/></button>) : <div className="lead-empty"><ClipboardList/><b>No hay solicitudes aquí.</b><span>Cuando alguien guarde una propuesta, aparecerá en esta lista.</span></div>}
+        {visibleLeads.length ? visibleLeads.map((lead) => <button type="button" key={lead.id} className={lead.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(lead.id)}><span className={`lead-status ${lead.status}`}>{statusLabels[lead.status]}</span><b>{lead.contactName}</b><small>{lead.roomType} · {lead.items.length} {lead.items.length === 1 ? 'pieza' : 'piezas'}</small><time>{dateTime.format(new Date(lead.updatedAt))}</time><ChevronRight/></button>) : <div className="lead-empty"><ClipboardList/><b>No hay solicitudes {filterLabels[filter].toLowerCase()}.</b><span>Cuando haya una propuesta en esta etapa, aparecerá en esta lista.</span></div>}
       </aside>
       {selected ? <article className="lead-detail">
         <header><div><span className={`lead-status ${selected.status}`}>{statusLabels[selected.status]}</span><h3>{selected.contactName}</h3><time>Recibida {dateTime.format(new Date(selected.createdAt))}</time></div><select value={selected.status} onChange={(event) => void saveLead(event.target.value as LeadStatus)} disabled={saving}>{statusOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></header>
