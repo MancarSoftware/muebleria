@@ -32,7 +32,16 @@ function whatsappForLead(lead: Lead) {
   const rawPhone = lead.contactPhone.replace(/\D/g, '');
   const phone = rawPhone.length === 10 && rawPhone.startsWith('0') ? `593${rawPhone.slice(1)}` : rawPhone;
   const pieces = lead.items.map((item) => `${item.name}${item.colorName ? ` (${item.colorName})` : ''}`).join(', ');
-  return `https://wa.me/${phone}?text=${encodeURIComponent(`Hola ${lead.contactName}, soy de Casa Nativa. Revisé tu propuesta para ${lead.roomType.toLowerCase()} con ${pieces}. ¿Te parece si la vemos juntos?`)}`;
+  const context = lead.source === 'contact_form'
+    ? `tu consulta para ${lead.roomType.toLowerCase()}`
+    : `tu propuesta para ${lead.roomType.toLowerCase()} con ${pieces}`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(`Hola ${lead.contactName}, soy de Casa Nativa. Revisé ${context}. ¿Te parece si la vemos juntos?`)}`;
+}
+
+function leadSummary(lead: Lead) {
+  return lead.source === 'contact_form'
+    ? `Consulta de contacto · ${lead.roomType}`
+    : `${lead.roomType} · ${lead.items.length} ${lead.items.length === 1 ? 'pieza' : 'piezas'}`;
 }
 
 export function LeadInbox() {
@@ -96,14 +105,14 @@ export function LeadInbox() {
     {error && <p className="lead-notice">{error}</p>}
     {loading && !leads.length ? <div className="lead-loading"><LoaderCircle className="spin"/> Cargando solicitudes…</div> : <div className="lead-layout">
       <aside className="lead-list" aria-label="Lista de solicitudes">
-        {visibleLeads.length ? visibleLeads.map((lead) => <button type="button" key={lead.id} className={lead.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(lead.id)}><span className={`lead-status ${lead.status}`}>{statusLabels[lead.status]}</span><b>{lead.contactName}</b><small>{lead.roomType} · {lead.items.length} {lead.items.length === 1 ? 'pieza' : 'piezas'}</small><time>{dateTime.format(new Date(lead.updatedAt))}</time><ChevronRight/></button>) : <div className="lead-empty"><ClipboardList/><b>No hay solicitudes {filterLabels[filter].toLowerCase()}.</b><span>Cuando haya una propuesta en esta etapa, aparecerá en esta lista.</span></div>}
+        {visibleLeads.length ? visibleLeads.map((lead) => <button type="button" key={lead.id} className={lead.id === selected?.id ? 'selected' : ''} onClick={() => setSelectedId(lead.id)}><span className={`lead-status ${lead.status}`}>{statusLabels[lead.status]}</span><b>{lead.contactName}</b><small>{leadSummary(lead)}</small><time>{dateTime.format(new Date(lead.updatedAt))}</time><ChevronRight/></button>) : <div className="lead-empty"><ClipboardList/><b>No hay solicitudes {filterLabels[filter].toLowerCase()}.</b><span>Cuando haya una propuesta en esta etapa, aparecerá en esta lista.</span></div>}
       </aside>
       {selected ? <article className="lead-detail">
         <header><div><span className={`lead-status ${selected.status}`}>{statusLabels[selected.status]}</span><h3>{selected.contactName}</h3><time>Recibida {dateTime.format(new Date(selected.createdAt))}</time></div><select value={selected.status} onChange={(event) => void saveLead(event.target.value as LeadStatus)} disabled={saving}>{statusOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></header>
         <div className="lead-contact-actions"><a href={whatsappForLead(selected)} target="_blank" rel="noreferrer"><MessageCircle/> Escribir por WhatsApp</a>{selected.contactEmail && <a href={`mailto:${selected.contactEmail}?subject=${encodeURIComponent('Tu propuesta Casa Nativa')}`}><Mail/> Enviar correo</a>}</div>
-        <dl className="lead-facts"><div><dt>Espacio</dt><dd>{selected.roomType}</dd></div><div><dt>Medidas</dt><dd>{selected.roomWidthCm && selected.roomDepthCm ? `${selected.roomWidthCm} × ${selected.roomDepthCm} cm` : 'Por confirmar'}</dd></div><div><dt>Presupuesto</dt><dd>{selected.budget ? money.format(selected.budget) : 'Por definir'}</dd></div><div><dt>Selección</dt><dd>{money.format(selected.totalPrice)}</dd></div></dl>
-        <section className="lead-pieces"><p className="eyebrow">PIEZAS SOLICITADAS</p>{selected.items.map((item) => <div key={item.productId}><span><b>{item.name}</b>{item.colorName && <small>{item.colorName}</small>}</span><span>{money.format(item.price)}</span></div>)}</section>
-        {selected.notes && <section className="lead-client-note"><p className="eyebrow">NOTA DEL CLIENTE</p><p>{selected.notes}</p></section>}
+        <dl className="lead-facts"><div><dt>Espacio</dt><dd>{selected.roomType}</dd></div><div><dt>Medidas</dt><dd>{selected.roomWidthCm && selected.roomDepthCm ? `${selected.roomWidthCm} × ${selected.roomDepthCm} cm` : 'Por confirmar'}</dd></div><div><dt>Presupuesto</dt><dd>{selected.budget ? money.format(selected.budget) : 'Por definir'}</dd></div><div><dt>{selected.source === 'contact_form' ? 'Solicitud' : 'Selección'}</dt><dd>{selected.source === 'contact_form' ? 'Consulta directa' : money.format(selected.totalPrice)}</dd></div></dl>
+        {selected.items.length > 0 && <section className="lead-pieces"><p className="eyebrow">PIEZAS SOLICITADAS</p>{selected.items.map((item) => <div key={item.productId}><span><b>{item.name}</b>{item.colorName && <small>{item.colorName}</small>}</span><span>{money.format(item.price)}</span></div>)}</section>}
+        {selected.notes && <section className="lead-client-note"><p className="eyebrow">{selected.source === 'contact_form' ? 'MENSAJE DEL CLIENTE' : 'NOTA DEL CLIENTE'}</p><p>{selected.notes}</p></section>}
         <section className="lead-followup"><p className="eyebrow"><StickyNote/> SEGUIMIENTO PRIVADO</p><textarea value={note} maxLength={1000} onChange={(event) => setNote(event.target.value)} placeholder="Ej. Hablamos por WhatsApp; enviar alternativa en madera clara."/><button type="button" className="dark-button" onClick={() => void saveLead(selected.status)} disabled={saving}>{saving ? <LoaderCircle className="spin"/> : <><Send/> Guardar seguimiento</>}</button>{saveConfirmation && <p className="lead-save-confirmation" role="status"><Check/> {saveConfirmation}</p>}</section>
       </article> : <div className="lead-detail lead-detail-empty"><ClipboardList/><h3>Elige una solicitud</h3><p>Selecciona una conversación para revisar la propuesta y continuar el seguimiento.</p></div>}
     </div>}

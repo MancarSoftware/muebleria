@@ -2,12 +2,14 @@ import { supabase } from '../lib/supabase';
 import type { SpaceProposalItem } from './spaceProposals';
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'closed' | 'archived';
+export type LeadSource = 'space_planner' | 'contact_form';
 
 export type Lead = {
   id: string;
   createdAt: string;
   updatedAt: string;
   status: LeadStatus;
+  source: LeadSource;
   roomType: string;
   roomWidthCm: number | null;
   roomDepthCm: number | null;
@@ -32,7 +34,7 @@ export type LeadActivity = {
 };
 
 type LeadRow = {
-  id: string; created_at: string; updated_at: string; status: LeadStatus; room_type: string;
+  id: string; created_at: string; updated_at: string; status: LeadStatus; source: LeadSource; room_type: string;
   room_width_cm: number | null; room_depth_cm: number | null; budget: number | null; total_price: number;
   required_area_sqm: number | null; furniture_footprint_sqm: number | null; items: SpaceProposalItem[];
   contact_name: string; contact_phone: string; contact_email: string | null; notes: string | null;
@@ -42,14 +44,14 @@ type LeadActivityRow = { id: string; created_at: string; activity_type: 'status_
 
 function mapLead(row: LeadRow): Lead {
   return {
-    id: row.id, createdAt: row.created_at, updatedAt: row.updated_at, status: row.status, roomType: row.room_type,
+    id: row.id, createdAt: row.created_at, updatedAt: row.updated_at, status: row.status, source: row.source, roomType: row.room_type,
     roomWidthCm: row.room_width_cm === null ? null : Number(row.room_width_cm), roomDepthCm: row.room_depth_cm === null ? null : Number(row.room_depth_cm), budget: row.budget === null ? null : Number(row.budget), totalPrice: Number(row.total_price), requiredAreaSqm: row.required_area_sqm === null ? null : Number(row.required_area_sqm), furnitureFootprintSqm: row.furniture_footprint_sqm === null ? null : Number(row.furniture_footprint_sqm), items: row.items ?? [], contactName: row.contact_name, contactPhone: row.contact_phone, contactEmail: row.contact_email, notes: row.notes,
   };
 }
 
 export async function getLeads(): Promise<Lead[]> {
   if (!supabase) throw new Error('Supabase is not configured.');
-  const { data, error } = await supabase.from('space_proposals').select('id, created_at, updated_at, status, room_type, room_width_cm, room_depth_cm, budget, total_price, required_area_sqm, furniture_footprint_sqm, items, contact_name, contact_phone, contact_email, notes').order('updated_at', { ascending: false }).limit(100);
+  const { data, error } = await supabase.from('space_proposals').select('id, created_at, updated_at, status, source, room_type, room_width_cm, room_depth_cm, budget, total_price, required_area_sqm, furniture_footprint_sqm, items, contact_name, contact_phone, contact_email, notes').order('updated_at', { ascending: false }).limit(100);
   if (error) throw error;
   return (data as LeadRow[]).map(mapLead);
 }

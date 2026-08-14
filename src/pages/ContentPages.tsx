@@ -1,9 +1,12 @@
-import { ArrowRight, Clock3, Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react';
+import { ArrowRight, Clock3, LoaderCircle, Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { business, whatsappLink } from '../config/business';
 import { products } from '../data/products';
 import { ProductCard } from '../components/ProductCard';
+import { isComEmail, onlyDigits } from '../lib/formValidation';
+import { trackEvent } from '../lib/analytics';
+import { saveContactInquiry } from '../services/contactInquiries';
 
 const image=(id:string)=>`https://images.unsplash.com/${id}?auto=format&fit=crop&w=1500&q=85`;
 type Kind='spaces'|'collections'|'inspiration'|'about';
@@ -14,4 +17,48 @@ function Collections(){return <><section className="page-hero"><p className="eye
 function About(){return <section className="page-hero"><p className="eyebrow">NUESTRA FORMA DE HACER</p><h1>Menos cosas.<br/>Mejores <em>historias.</em></h1><p>Casa Nativa nace en Quito para ayudar a construir hogares que envejecen con gracia, no modas que terminan rápido.</p></section>}
 export function Editorial({kind}:{kind:Kind}){if(kind==='spaces')return <Spaces/>;if(kind==='collections')return <Collections/>;return <About/>}
 export function Contact(){return <><section className="contact-hero"><p className="eyebrow">HABLEMOS DE TU ESPACIO</p><h1>Una conversación puede<br/>cambiar <em>la casa.</em></h1><p>Cuéntanos qué quieres resolver. Te ayudamos a elegir piezas que funcionen con tu espacio, tu rutina y tu forma de vivir.</p><div><a className="light-button" href={whatsappLink('Hola, quiero recibir asesoría para mi espacio.')} target="_blank" rel="noreferrer"><MessageCircle/> Escribir por WhatsApp</a><a className="contact-hero-link" href={`tel:${business.phone}`}>Llamar al showroom</a></div></section><section className="contact-channels"><p className="eyebrow">ELIGE CÓMO CONVERSAR</p><div><a href={whatsappLink('Hola, quiero recibir asesoría para mi espacio.')} target="_blank" rel="noreferrer"><MessageCircle/><span>WhatsApp</span><b>Respuesta rápida para consultas y fotos de tu espacio.</b><ArrowRight/></a><a href={`tel:${business.phone}`}><Phone/><span>Teléfono</span><b>{business.phone}</b><ArrowRight/></a><a href={`mailto:${business.email}`}><Mail/><span>Correo</span><b>{business.email}</b><ArrowRight/></a></div></section><section className="contact-visit"><div className="visit-map"><iframe title={`Ubicación de ${business.name}`} src={business.mapsEmbedUrl} loading="lazy" referrerPolicy="no-referrer-when-downgrade"/><a className="map-open" href={business.mapsUrl} target="_blank" rel="noreferrer">Abrir mapa <ArrowRight/></a></div><div><p className="eyebrow">VEN A PROBAR LAS PIEZAS</p><h2>La textura, la escala y la comodidad se entienden mejor <em>en persona.</em></h2><p><MapPin/>{business.address}</p><p><Clock3/>{business.hours}</p><ul><li>Te recomendamos agendar para recibir atención sin prisa.</li><li>Trae fotos o medidas; revisamos juntos las proporciones.</li><li>Podrás comparar acabados y textiles con luz real.</li></ul><a className="dark-button" href={whatsappLink('Hola, quisiera agendar una visita al showroom.')} target="_blank" rel="noreferrer">Agendar mi visita <ArrowRight/></a></div></section><section className="contact-consult"><div><p className="eyebrow">PREFIERES ESCRIBIRNOS</p><h2>Cuéntanos qué estás <em>imaginando.</em></h2><p>Si puedes, comparte el ambiente, las medidas aproximadas y las piezas que necesitas. Así empezamos con una recomendación útil.</p><aside><Clock3/><div><b>{business.responseTime}</b><span>Te diremos cuál es el siguiente paso y cómo podemos ayudarte.</span></div></aside></div><ContactForm/></section><section className="contact-next"><p className="eyebrow">DESPUÉS DE ESCRIBIRNOS</p><div>{[['01','Leemos tu necesidad','Revisamos el ambiente, las medidas y tu punto de partida.'],['02','Te recomendamos opciones','Compartimos piezas, materiales o una cita en showroom que tengan sentido.'],['03','Decides con tranquilidad','Resolvemos dudas de medidas, entrega y cuidado antes de avanzar.']].map(([number,title,description])=><article key={number}><span>{number}</span><h3>{title}</h3><p>{description}</p></article>)}</div></section><section className="contact-final"><p className="eyebrow">CUANDO ESTÉS LISTO</p><h2>Hagamos espacio<br/>para lo que <em>importa.</em></h2><a className="light-button" href={whatsappLink('Hola, quiero conversar sobre mi espacio.')} target="_blank" rel="noreferrer">Hablar por WhatsApp <ArrowRight/></a></section></>}
-function ContactForm(){const [sent,setSent]=useState(false);const [error,setError]=useState('');function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();const d=new FormData(e.currentTarget);if(!d.get('name')||!d.get('email')||!d.get('message'))return setError('Completa nombre, correo y mensaje.');setError('');setSent(true)}return <form className="contact-form contact-form-v2" onSubmit={submit}>{sent?<div className="success"><Send/><h2>Mensaje recibido.</h2><p>{business.responseTime}</p></div>:<><label>Nombre<input name="name" placeholder="Tu nombre" required/></label><label>Correo electrónico<input name="email" type="email" placeholder="nombre@correo.com" required/></label><label>Teléfono<input name="phone" type="tel" placeholder="Para responderte más fácil"/></label><label>¿Qué espacio estás trabajando?<select name="space" defaultValue=""><option value="" disabled>Selecciona una opción</option><option>Sala</option><option>Dormitorio</option><option>Comedor</option><option>Estudio</option><option>Otro</option></select></label><label>Cuéntanos un poco más<textarea name="message" placeholder="Medidas aproximadas, piezas que necesitas, estilo o presupuesto…" required/></label>{error&&<p className="error">{error}</p>}<button className="dark-button">Enviar consulta <ArrowRight/></button><small>Al enviar, aceptas que usemos estos datos solo para responder esta consulta.</small></>}</form>}
+function ContactForm() {
+  const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const name = String(data.get('name') ?? '');
+    const email = String(data.get('email') ?? '');
+    const phone = String(data.get('phone') ?? '');
+    const roomType = String(data.get('space') ?? '');
+    const message = String(data.get('message') ?? '');
+
+    if (!name.trim() || !roomType || message.trim().length < 8 || !/^\d{7,15}$/.test(phone) || !isComEmail(email)) {
+      setError('Revisa los campos: teléfono solo con números y correo con @ y .com.');
+      return;
+    }
+
+    setSending(true);
+    setError('');
+    try {
+      await saveContactInquiry({ name, email, phone, roomType, message });
+      trackEvent('generate_lead', { location: 'contact_form', room_type: roomType });
+      setSent(true);
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : 'No pudimos enviar tu consulta. Inténtalo otra vez.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return <form className="contact-form contact-form-v2" onSubmit={(event) => void submit(event)} noValidate>
+    {sent ? <div className="success"><Send/><h2>Consulta recibida.</h2><p>Ya llegó al equipo de Casa Nativa. {business.responseTime}</p></div> : <>
+      <label>Nombre<input name="name" placeholder="Tu nombre" minLength={2} maxLength={100} required/></label>
+      <label>Correo electrónico<input name="email" type="email" inputMode="email" placeholder="nombre@correo.com" maxLength={254} required onInput={(event) => event.currentTarget.setCustomValidity('')}/></label>
+      <label>Teléfono<input name="phone" type="tel" inputMode="numeric" placeholder="Ej. 0986951419" pattern="[0-9]{7,15}" maxLength={15} required onInput={(event) => { event.currentTarget.value = onlyDigits(event.currentTarget.value); event.currentTarget.setCustomValidity(''); }}/></label>
+      <label>¿Qué espacio estás trabajando?<select name="space" defaultValue="" required><option value="" disabled>Selecciona una opción</option><option>Sala</option><option>Dormitorio</option><option>Comedor</option><option>Estudio</option><option>Otro</option></select></label>
+      <label>Cuéntanos un poco más<textarea name="message" placeholder="Medidas aproximadas, piezas que necesitas, estilo o presupuesto…" minLength={8} maxLength={2000} required/></label>
+      {error && <p className="error" role="alert">{error}</p>}
+      <button className="dark-button" disabled={sending}>{sending ? <><LoaderCircle className="spin"/> Enviando consulta…</> : <>Enviar consulta <ArrowRight/></>}</button>
+      <small>Al enviar, aceptas que usemos estos datos solo para responder esta consulta.</small>
+    </>}
+  </form>;
+}
