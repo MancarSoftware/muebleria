@@ -390,6 +390,38 @@ main { overflow: clip; }
 .room-options button.selected { background: var(--accent); border-color: var(--accent); }
 .space-item, .space-empty { border-radius: 18px; }
 
+.proposal-paths > h2, .proposal-route-head h2 { margin-top: 14px; }
+.proposal-paths > p:not(.eyebrow), .proposal-route-head > p:not(.eyebrow) { color: #d2d8d0; font-size: 13px; line-height: 1.55; }
+.proposal-paths > p:not(.eyebrow) { margin: 0 0 25px; }
+.proposal-path {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  width: 100%;
+  gap: 13px;
+  align-items: center;
+  margin-top: 11px;
+  padding: 17px;
+  color: #fff;
+  text-align: left;
+  background: #ffffff10;
+  border: 1px solid #c8e4bc5c;
+  border-radius: 17px;
+  transition: transform .22s ease, background .22s ease, border-color .22s ease;
+}
+.proposal-path:hover { background: #ffffff1d; border-color: var(--lime); transform: translateY(-3px); }
+.proposal-path > span { display: grid; width: 34px; height: 34px; place-items: center; color: var(--olive); background: var(--lime); border-radius: 50%; }
+.proposal-path svg { width: 16px; }
+.proposal-path > svg { justify-self: end; color: var(--lime); }
+.proposal-path b, .proposal-path small { display: block; }
+.proposal-path b { font-size: 14px; }
+.proposal-path small { margin-top: 3px; color: #d2d8d0; font-size: 11px; line-height: 1.4; }
+.proposal-add-items, .proposal-change-route { display: inline-flex; align-items: center; gap: 8px; margin-top: 19px; padding-bottom: 3px; color: #fff; border-bottom: 1px solid #c8e4bc8c; font-size: 12px; }
+.proposal-add-items svg { width: 15px; }
+.proposal-route-head { margin-bottom: 26px; }
+.proposal-route-head h2 { margin-bottom: 13px; }
+.proposal-change-route { margin-top: 3px; color: var(--lime); }
+.space-brief legend small { color: #c8e4bc; font-size: 10px; }
+
 /* Footer and private catalogue keep their information architecture, with the new surface system. */
 .site-footer { position: relative; overflow: hidden; background: linear-gradient(150deg, #14241f, #1d3930 58%, #244b40); }
 .site-footer::before { content: ''; position: absolute; width: 430px; height: 430px; top: -325px; right: 7vw; border: 1px solid #c8e4bc47; border-radius: 50%; }
