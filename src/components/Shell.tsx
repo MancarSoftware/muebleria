@@ -17,7 +17,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const planner = useSpacePlanner();
   const isHome = location.pathname === '/';
-  const hasOliveHeader = isHome || ['/contact', '/privacy', '/terms'].includes(location.pathname);
+  const hasOliveHeader = isHome || ['/spaces', '/collections', '/inspiration', '/about', '/contact', '/privacy', '/terms'].includes(location.pathname);
 
   useEffect(() => {
     const update = () => setScrolled(scrollY > 24);
