@@ -1,5 +1,6 @@
 import { isComEmail, isValidPhone } from '../lib/formValidation';
 import { supabase } from '../lib/supabase';
+import { legal } from '../config/legal';
 
 export type SpaceProposalItem = {
   productId: string;
@@ -25,6 +26,7 @@ export type SpaceProposalInput = {
   contactEmail?: string;
   notes?: string;
   website?: string;
+  privacyAccepted: boolean;
 };
 
 type SaveResult = { id: string };
@@ -42,11 +44,13 @@ function rpcPayload(input: SpaceProposalInput) {
     p_contact_phone: input.contactPhone.trim(),
     p_contact_email: input.contactEmail?.trim() || '',
     p_notes: input.notes?.trim() || '',
+    p_privacy_policy_version: legal.policyVersion,
   };
 }
 
 export async function saveSpaceProposal(input: SpaceProposalInput): Promise<SaveResult> {
   if (input.website) throw new Error('No se pudo registrar la propuesta.');
+  if (!input.privacyAccepted) throw new Error('Debes aceptar la Política de privacidad para enviar la propuesta.');
   if (!input.items.length || input.contactName.trim().length < 2 || !isValidPhone(input.contactPhone.trim())) {
     throw new Error('Completa tu nombre y un WhatsApp ecuatoriano de 10 números.');
   }
@@ -73,9 +77,9 @@ export async function saveSpaceProposal(input: SpaceProposalInput): Promise<Save
   }
 
   if (!supabase) throw new Error('El registro de propuestas aún no está configurado.');
-  const { data, error } = await supabase.rpc('submit_space_proposal', rpcPayload(input));
+  const { data, error } = await supabase.rpc('submit_space_proposal_with_consent', rpcPayload(input));
   if (error) {
-    if (error.code === 'PGRST202' || error.code === '42883') throw new Error('Falta activar el registro de propuestas. Ejecuta la migración 202608120003 en Supabase.');
+    if (error.code === 'PGRST202' || error.code === '42883') throw new Error('Falta activar el registro de propuestas. Ejecuta la migración 202608120009 en Supabase.');
     throw new Error(error.message);
   }
   return { id: data as string };

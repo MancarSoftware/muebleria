@@ -1,6 +1,6 @@
-# Notificación de propuestas
+# Notificación de solicitudes
 
-Esta función recibe el webhook de inserciones en `public.space_proposals` y envía un correo al responsable mediante Resend.
+Esta función recibe el webhook de inserciones en `public.space_proposals` y envía un correo al responsable mediante Resend. Incluye propuestas desde **Mi espacio** y consultas generales desde **Contacto**.
 
 ## Configuración de demo
 
@@ -17,6 +17,6 @@ Esta función recibe el webhook de inserciones en `public.space_proposals` y env
    - Tipo: `Supabase Edge Function`
    - Función: `notify-space-proposal`
    - Añade el encabezado de autorización con la service key desde el asistente del panel.
-5. Envía una propuesta de prueba desde `/space`; el correo llega a `alemancar0511@gmail.com` y la fila queda registrada en `space_proposals`.
+5. Envía una propuesta de prueba desde `/space` y una consulta desde `/contact`; ambos correos llegan a `alemancar0511@gmail.com` y cada solicitud queda registrada en `space_proposals`.
 
 No agregues `RESEND_API_KEY` a `.env.local`, al repositorio ni a variables `VITE_`.

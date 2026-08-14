@@ -8,6 +8,7 @@ type ProposalItem = {
 type Proposal = {
   id?: string;
   created_at?: string;
+  source?: 'space_planner' | 'contact_form';
   contact_name?: string;
   contact_phone?: string;
   contact_email?: string | null;
@@ -36,6 +37,9 @@ function money(value?: number | null) {
 }
 
 function proposalEmail(proposal: Proposal) {
+  if (proposal.source === 'contact_form') {
+    return `<!doctype html><html><body style="margin:0;background:#f3efe6;color:#20221e;font-family:Arial,sans-serif"><main style="max-width:620px;margin:0 auto;padding:32px"><p style="letter-spacing:2px;font-size:11px">NUEVA CONSULTA · CASA NATIVA</p><h1 style="font-family:Georgia,serif;font-size:38px;font-weight:500;margin:10px 0 26px">${escapeHtml(proposal.contact_name ?? 'Nuevo visitante')} quiere asesoría.</h1><section style="background:#fffdf8;padding:24px;border:1px solid #ded5c6"><p><strong>WhatsApp:</strong> ${escapeHtml(proposal.contact_phone ?? 'No indicado')}</p><p><strong>Correo:</strong> ${escapeHtml(proposal.contact_email ?? 'No indicado')}</p><p><strong>Espacio:</strong> ${escapeHtml(proposal.room_type ?? 'Por definir')}</p><p><strong>Mensaje:</strong><br>${escapeHtml(proposal.notes ?? 'No indicó detalles adicionales.')}</p></section><p style="font-size:12px;color:#6f695e">Solicitud ${escapeHtml(proposal.id ?? '')} · revísala en el administrador.</p></main></body></html>`;
+  }
   const room = [proposal.room_width_cm, proposal.room_depth_cm].every((value) => typeof value === 'number')
     ? `${proposal.room_width_cm! / 100} m × ${proposal.room_depth_cm! / 100} m`
     : 'Por definir';
@@ -57,7 +61,7 @@ Deno.serve(async (request) => {
     body: JSON.stringify({
       from: sender,
       to: [destination],
-      subject: `Nueva propuesta · ${event.record.contact_name ?? 'Casa Nativa'}`,
+      subject: `${event.record.source === 'contact_form' ? 'Nueva consulta' : 'Nueva propuesta'} · ${event.record.contact_name ?? 'Casa Nativa'}`,
       html: proposalEmail(event.record),
     }),
   });

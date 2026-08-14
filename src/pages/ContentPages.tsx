@@ -22,6 +22,7 @@ function ContactForm() {
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   useEffect(() => {
     if (location.hash !== '#contact-form') return;
@@ -45,11 +46,15 @@ function ContactForm() {
       setError('Revisa los campos: teléfono ecuatoriano de 10 números y correo con @ y .com.');
       return;
     }
+    if (!privacyAccepted) {
+      setError('Debes aceptar la Política de privacidad para enviar tu consulta.');
+      return;
+    }
 
     setSending(true);
     setError('');
     try {
-      await saveContactInquiry({ name, email, phone, roomType, message });
+      await saveContactInquiry({ name, email, phone, roomType, message, privacyAccepted });
       trackEvent('generate_lead', { location: 'contact_form', room_type: roomType });
       setSent(true);
     } catch (submissionError) {
@@ -66,6 +71,7 @@ function ContactForm() {
       <label>Teléfono<input name="phone" type="tel" inputMode="numeric" placeholder="Ej. 0986951419" pattern="[0-9]{10}" maxLength={10} required onInput={(event) => { event.currentTarget.value = onlyDigits(event.currentTarget.value); event.currentTarget.setCustomValidity(''); }}/></label>
       <label>¿Qué espacio estás trabajando?<select name="space" defaultValue="" required><option value="" disabled>Selecciona una opción</option><option>Sala</option><option>Dormitorio</option><option>Comedor</option><option>Estudio</option><option>Otro</option></select></label>
       <label>Cuéntanos un poco más<textarea name="message" placeholder="Medidas aproximadas, piezas que necesitas, estilo o presupuesto…" minLength={8} maxLength={2000} required/></label>
+      <label className="legal-consent"><input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} required/><span>He leído la <Link to="/privacy" target="_blank">Política de privacidad</Link> y autorizo el uso de mis datos para responder esta consulta. También conozco los <Link to="/terms" target="_blank">Términos y condiciones</Link>.</span></label>
       {error && <p className="error" role="alert">{error}</p>}
       <button className="dark-button" disabled={sending}>{sending ? <><LoaderCircle className="spin"/> Enviando consulta…</> : <>Enviar consulta <ArrowRight/></>}</button>
       <small>Al enviar, aceptas que usemos estos datos solo para responder esta consulta.</small>

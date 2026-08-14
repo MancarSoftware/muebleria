@@ -20,7 +20,7 @@ npm run dev
 El propietario gestiona productos en `/admin`: crea borradores, sube fotos, edita textos y publica piezas. El sitio público y la asesoría IA solo leen productos publicados.
 
 1. Crea un proyecto Supabase en la cuenta del cliente.
-2. Para un proyecto nuevo, ejecuta las migraciones en orden: `supabase/migrations/202608120001_catalog.sql`, `202608120002_product_color_variants.sql`, `202608120003_space_proposals.sql`, `202608120004_site_analytics.sql`, `202608120005_site_analytics_sessions.sql`, `202608120006_lead_inbox.sql`, `202608120007_contact_inquiries.sql` y `202608120008_ecuador_phone_validation.sql`. Si el proyecto ya tiene catálogo y variantes, ejecuta las migraciones pendientes desde el SQL Editor de Supabase.
+2. Para un proyecto nuevo, ejecuta las migraciones en orden: `supabase/migrations/202608120001_catalog.sql`, `202608120002_product_color_variants.sql`, `202608120003_space_proposals.sql`, `202608120004_site_analytics.sql`, `202608120005_site_analytics_sessions.sql`, `202608120006_lead_inbox.sql`, `202608120007_contact_inquiries.sql`, `202608120008_ecuador_phone_validation.sql` y `202608120009_record_lead_consent.sql`. Si el proyecto ya tiene catálogo y variantes, ejecuta las migraciones pendientes desde el SQL Editor de Supabase.
 3. Crea el usuario propietario en **Authentication → Users** y añade su UUID a `public.profiles` con rol `admin`, siguiendo el comentario al final de la migración.
 4. Configura las cuatro variables de Supabase del archivo `.env.example`. Las variables que comienzan con `VITE_` son públicas; la `SUPABASE_SERVICE_ROLE_KEY` es solo para funciones de servidor.
 
@@ -54,9 +54,13 @@ El flujo [deploy-pages.yml](.github/workflows/deploy-pages.yml) publica la rama 
 
 El flujo compila con rutas hash para que enlaces como `/#/catalog` o `/#/admin` funcionen sin configuración de servidor. GitHub Pages no ejecuta las funciones de `api/`, por eso en esta demo las propuestas se guardan de forma segura mediante la función SQL de Supabase. La asesoría IA conserva su alternativa local hasta desplegarla en una plataforma con funciones serverless.
 
-### Aviso por correo de propuestas
+### Privacidad y consentimiento
 
-Para recibir un email en `alemancar0511@gmail.com` cada vez que alguien guarda una propuesta, configura la función de Supabase incluida en [supabase/functions/notify-space-proposal](supabase/functions/notify-space-proposal). Necesitas una clave de Resend, que se mantiene exclusivamente en los secretos de Supabase. La guía exacta está en su [README](supabase/functions/notify-space-proposal/README.md).
+Los dos formularios requieren una aceptación expresa de la Política de privacidad y guardan la versión aceptada junto a cada solicitud. Antes de usar el sitio para captar clientes reales, ejecuta `supabase/migrations/202608120009_record_lead_consent.sql` y revisa los textos de `/#/privacy` y `/#/terms` con asesoría jurídica local.
+
+### Aviso por correo de solicitudes
+
+Para recibir un email en `alemancar0511@gmail.com` cada vez que alguien guarda una propuesta o envía una consulta, configura la función de Supabase incluida en [supabase/functions/notify-space-proposal](supabase/functions/notify-space-proposal). Necesitas una clave de Resend, que se mantiene exclusivamente en los secretos de Supabase. La guía exacta está en su [README](supabase/functions/notify-space-proposal/README.md).
 
 ### Estadísticas de visitas con Google Analytics
 

@@ -12,16 +12,18 @@ const Editorial = lazy(() => import('./pages/ContentPages').then((module) => ({ 
 const Home = lazy(() => import('./pages/Home').then((module) => ({ default: module.Home })));
 const Inspiration = lazy(() => import('./pages/Inspiration').then((module) => ({ default: module.Inspiration })));
 const InspirationArticle = lazy(() => import('./pages/InspirationArticle').then((module) => ({ default: module.InspirationArticle })));
+const PrivacyPolicy = lazy(() => import('./pages/Legal').then((module) => ({ default: module.PrivacyPolicy })));
 const NotFound = lazy(() => import('./pages/NotFound').then((module) => ({ default: module.NotFound })));
 const ProductDetail = lazy(() => import('./pages/ProductDetail').then((module) => ({ default: module.ProductDetail })));
 const SpacePlanner = lazy(() => import('./pages/SpacePlanner').then((module) => ({ default: module.SpacePlanner })));
+const Terms = lazy(() => import('./pages/Legal').then((module) => ({ default: module.Terms })));
 
 function PageLoading() {
   return <section className="empty"><p className="eyebrow">CASA NATIVA</p><h2>Preparando el espacio…</h2></section>;
 }
 
 function PublicSite() {
-  return <Shell><Suspense fallback={<PageLoading/>}><Routes><Route path="/" element={<Home/>}/><Route path="/catalog" element={<Catalog/>}/><Route path="/catalog/:slug" element={<ProductDetail/>}/><Route path="/space" element={<SpacePlanner/>}/><Route path="/contact" element={<Contact/>}/><Route path="/spaces" element={<Editorial kind="spaces"/>}/><Route path="/collections" element={<Editorial kind="collections"/>}/><Route path="/inspiration" element={<Inspiration/>}/><Route path="/inspiration/:slug" element={<InspirationArticle/>}/><Route path="/about" element={<About/>}/><Route path="*" element={<NotFound/>}/></Routes></Suspense></Shell>;
+  return <Shell><Suspense fallback={<PageLoading/>}><Routes><Route path="/" element={<Home/>}/><Route path="/catalog" element={<Catalog/>}/><Route path="/catalog/:slug" element={<ProductDetail/>}/><Route path="/space" element={<SpacePlanner/>}/><Route path="/contact" element={<Contact/>}/><Route path="/privacy" element={<PrivacyPolicy/>}/><Route path="/terms" element={<Terms/>}/><Route path="/spaces" element={<Editorial kind="spaces"/>}/><Route path="/collections" element={<Editorial kind="collections"/>}/><Route path="/inspiration" element={<Inspiration/>}/><Route path="/inspiration/:slug" element={<InspirationArticle/>}/><Route path="/about" element={<About/>}/><Route path="*" element={<NotFound/>}/></Routes></Suspense></Shell>;
 }
 
 export default function App() {

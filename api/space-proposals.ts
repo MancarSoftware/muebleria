@@ -2,7 +2,7 @@ type ProposalItem = { productId?: unknown; colorName?: unknown };
 type Proposal = {
   roomType?: unknown; roomWidthCm?: unknown; roomDepthCm?: unknown; budget?: unknown;
   totalPrice?: unknown; requiredAreaSqm?: unknown; furnitureFootprintSqm?: unknown;
-  items?: ProposalItem[]; contactName?: unknown; contactPhone?: unknown; contactEmail?: unknown; notes?: unknown; website?: unknown;
+  items?: ProposalItem[]; contactName?: unknown; contactPhone?: unknown; contactEmail?: unknown; notes?: unknown; website?: unknown; privacyAccepted?: unknown;
 };
 type Request = { method?: string; body?: Proposal };
 type Response = { status: (statusCode: number) => { json: (body: unknown) => void } };
@@ -18,8 +18,8 @@ export default async function handler(request: Request, response: Response) {
   const items = Array.isArray(proposal?.items) ? proposal.items.slice(0, 20) : [];
   if (text(proposal?.website)) return response.status(204).json({ id: 'ignored' });
   const productIds = items.map((item) => text(item.productId, 100));
-  if (name.length < 2 || !/^\d{10}$/.test(phone) || !items.length || new Set(productIds).size !== items.length || !productIds.every(isUuid)) {
-    return response.status(400).json({ message: 'Completa un WhatsApp ecuatoriano de 10 números y al menos una pieza.' });
+  if (name.length < 2 || !/^\d{10}$/.test(phone) || proposal?.privacyAccepted !== true || !items.length || new Set(productIds).size !== items.length || !productIds.every(isUuid)) {
+    return response.status(400).json({ message: 'Acepta la Política de privacidad, completa un WhatsApp ecuatoriano de 10 números y selecciona una pieza.' });
   }
 
   const url = process.env.SUPABASE_URL;
@@ -27,7 +27,7 @@ export default async function handler(request: Request, response: Response) {
   if (!url || !serviceRoleKey) return response.status(503).json({ message: 'Lead storage is not configured.' });
 
   try {
-    const result = await fetch(`${url}/rest/v1/rpc/submit_space_proposal`, {
+    const result = await fetch(`${url}/rest/v1/rpc/submit_space_proposal_with_consent`, {
       method: 'POST',
       headers: {
         apikey: serviceRoleKey,
@@ -46,6 +46,7 @@ export default async function handler(request: Request, response: Response) {
         p_contact_phone: phone,
         p_contact_email: text(proposal?.contactEmail, 254),
         p_notes: text(proposal?.notes, 2_000),
+        p_privacy_policy_version: '2026-08-13',
       }),
     });
     if (!result.ok) return response.status(502).json({ message: 'No pudimos registrar la propuesta.' });

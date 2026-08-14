@@ -1,0 +1,13 @@
+/* Isolated overrides for the privacy/terms additions. */
+.site-footer .footer-bottom{grid-template-columns:auto minmax(0,1fr) auto auto auto}
+.footer-legal{white-space:nowrap}
+
+@media(max-width:900px){
+  .site-footer .footer-bottom{grid-template-columns:auto minmax(0,1fr) auto}
+  .site-footer .footer-legal{grid-column:2/-1;justify-self:start}
+}
+
+@media(max-width:560px){
+  .site-footer .footer-bottom{grid-template-columns:1fr 1fr}
+  .site-footer .footer-legal{grid-column:1/-1;justify-self:start;order:3}
+}
