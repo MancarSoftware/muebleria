@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Heart, MapPin, Menu, MessageCircle, Search, X } from 'lucide-react';
+import { ArrowUp, Heart, MapPin, Menu, MessageCircle, Search, X } from 'lucide-react';
 import { siFacebook, siInstagram, siTiktok } from 'simple-icons';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -14,13 +14,18 @@ const socials = [{ key: 'instagram', label: 'Instagram', icon: siInstagram }, { 
 export function Shell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const location = useLocation();
   const planner = useSpacePlanner();
   const isHome = location.pathname === '/';
   const hasOliveHeader = isHome || ['/spaces', '/collections', '/inspiration', '/about', '/contact', '/privacy', '/terms'].includes(location.pathname);
 
   useEffect(() => {
-    const update = () => setScrolled(scrollY > 24);
+    const update = () => {
+      setScrolled(scrollY > 24);
+      const scrollableHeight = document.documentElement.scrollHeight - innerHeight;
+      setScrollProgress(scrollableHeight > 0 ? Math.min(100, (scrollY / scrollableHeight) * 100) : 0);
+    };
     update();
     addEventListener('scroll', update, { passive: true });
     return () => removeEventListener('scroll', update);
@@ -28,6 +33,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const labels: Record<string, string> = { '/': 'Diseño para habitar', '/catalog': 'Catálogo', '/space': 'Mi espacio', '/spaces': 'Espacios', '/collections': 'Colecciones', '/inspiration': 'Inspiración', '/about': 'Nosotros', '/contact': 'Contacto', '/privacy': 'Política de privacidad', '/terms': 'Términos y condiciones' };
+    if (!labels[location.pathname] && location.pathname.startsWith('/catalog/')) labels[location.pathname] = 'Pieza del catálogo';
+    if (!labels[location.pathname] && location.pathname.startsWith('/inspiration/')) labels[location.pathname] = 'Guía Casa Nativa';
     setOpen(false);
     document.title = `${business.name} — ${labels[location.pathname] || 'Página no encontrada'}`;
     trackPageView(`${location.pathname}${location.search}`, document.title);
@@ -44,8 +51,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <button aria-label="Abrir menú" onClick={() => setOpen(true)}><Menu/></button>
       </div>
     </header>
+    <div className="site-progress" aria-hidden="true"><span style={{ transform: `scaleX(${scrollProgress / 100})` }}/></div>
     <AnimatePresence>{open && <motion.aside className="mobile-nav" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}><button onClick={() => setOpen(false)} aria-label="Cerrar menú"><X/></button>{links.map(([name, path]) => <Link key={path} to={path}>{name}</Link>)}<Link to="/space">Mi espacio ({planner.items.length})</Link></motion.aside>}</AnimatePresence>
-    <main>{children}</main>
+    <motion.main key={`${location.pathname}${location.search}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .42, ease: [0.22, 1, 0.36, 1] }}>{children}</motion.main>
+    <AnimatePresence>{scrolled && <motion.button className="scroll-to-top" type="button" aria-label="Volver al inicio" onClick={() => scrollTo({ top: 0, behavior: 'smooth' })} initial={{ opacity: 0, y: 12, scale: .92 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: .92 }}><ArrowUp/><span>Arriba</span></motion.button>}</AnimatePresence>
     <Footer/>
   </>;
 }
