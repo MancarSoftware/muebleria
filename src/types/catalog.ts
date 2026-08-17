@@ -28,8 +28,4 @@ export type Product = {
   inventoryStatus?: InventoryStatus;
   leadTimeDays?: number | null;
   sortOrder?: number;
-  arModelUrl?: string;
-  arModelStoragePath?: string | null;
-  arIosModelUrl?: string;
-  arIosModelStoragePath?: string | null;
 };

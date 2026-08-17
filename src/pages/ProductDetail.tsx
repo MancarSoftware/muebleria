@@ -2,7 +2,6 @@ import { ArrowLeft, Check, Heart } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CatalogAdvisor } from '../components/CatalogAdvisor';
-import { ArProductViewer } from '../components/ArProductViewer';
 import { ProductCard } from '../components/ProductCard';
 import { whatsappLink } from '../config/business';
 import { useCatalog } from '../hooks/useCatalog';
@@ -71,7 +70,6 @@ export function ProductDetail() {
           <div className="color-detail"><dt>Colores</dt><dd>{variants.length ? <div className="color-picker" role="radiogroup" aria-label="Selecciona un color">{variants.map((variant) => <button type="button" key={variant.id} className={variant.id === selectedVariant?.id ? 'selected' : ''} aria-checked={variant.id === selectedVariant?.id} role="radio" onClick={() => { setSelectedVariantId(variant.id); if (inSpace) planner.updateColor(product.id, variant.name); }} title={variant.name}><i style={{ backgroundColor: variant.hex }}/><span className="sr-only">{variant.name}</span></button>)}</div> : 'Consulta disponibilidad'}</dd></div>
         </dl>
         <CatalogAdvisor context={product} products={products}/>
-        <ArProductViewer products={[product]}/>
         <a className="dark-button full" href={whatsappLink(`Hola, me interesa ${product.name} en color ${selectedColorName}. La vi en el sitio web y quisiera más información.`)} onClick={() => trackEvent('contact_whatsapp', { location: 'product_detail', item_id: product.id, item_name: product.name })} target="_blank" rel="noreferrer">Consultar por WhatsApp</a>
         <button className="save" onClick={() => { if (inSpace) { planner.remove(product.id); trackEvent('remove_from_space', { item_id: product.id, item_name: product.name }); } else { planner.add(product.id, selectedColorName); trackEvent('add_to_space', { item_id: product.id, item_name: product.name, item_category: product.category, value: product.price, currency: 'USD' }); } }}><Heart fill={inSpace ? 'currentColor' : 'none'}/> {inSpace ? 'En mi espacio' : 'Añadir a mi espacio'}</button>
         <ul>{['Materiales seleccionados para durar', 'Entrega coordinada y atención personal', 'Asesoría para tu espacio'].map((item) => <li key={item}><Check/>{item}</li>)}</ul>

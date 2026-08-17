@@ -1,7 +1,6 @@
 import { ArrowRight, Check, Clock3, Heart, MapPin, Ruler, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArProductViewer } from '../components/ArProductViewer';
 import { whatsappLink } from '../config/business';
 import { useCatalog } from '../hooks/useCatalog';
 import { useSpacePlanner } from '../hooks/useSpacePlanner';
@@ -125,7 +124,6 @@ export function SpacePlanner() {
           const requirement = space.requirements.find((item) => item.productId === product.id);
           return <article key={product.id} className="space-item"><img src={image} alt={product.name} loading="lazy" decoding="async"/><div><p className="eyebrow">{product.category}</p><h3>{product.name}</h3><b>${product.price.toLocaleString('en-US')}</b><label>Color<select value={colorName ?? selectedColor?.name ?? ''} onChange={(event) => planner.updateColor(product.id, event.target.value)}>{variants.map((variant) => <option key={variant.id}>{variant.name}</option>)}</select></label>{requirement && <small className="space-item-rule">Huella: {(requirement.widthCm / 100).toFixed(2)} × {(requirement.depthCm / 100).toFixed(2)} m · paso recomendado: {requirement.clearanceCm} cm</small>}</div><button className="space-remove" type="button" onClick={() => planner.remove(product.id)} aria-label={`Quitar ${product.name}`}><Trash2/></button></article>;
         })}</div> : <div className="space-empty"><Heart/><h2>Guarda piezas desde el catálogo.</h2><p>Cuando veas una que te interese, usa “Añadir a mi espacio”. Aquí podrás revisarlas como una propuesta completa.</p><Link className="dark-button" to="/catalog">Explorar catálogo <ArrowRight/></Link></div>}
-        {selectedItems.length > 0 && <ArProductViewer products={selectedItems.map((item) => item.product)} placement="selection"/>}
       </section>
       <aside className="space-brief">
         {!selectedItems.length ? <div className="space-general-inquiry"><p className="eyebrow">¿AÚN NO TIENES PIEZAS?</p><h2>Empecemos por<br/><em>lo que buscas.</em></h2><p>Cuéntanos qué necesitas y te ayudamos a empezar sin elegir un producto todavía.</p><Link to="/contact#contact-form">Enviar una consulta <ArrowRight/></Link></div> : proposalRoute === 'choose' ? <div className="proposal-paths"><p className="eyebrow">¿CÓMO QUIERES CONTINUAR?</p><h2>Tu selección<br/>ya está <em>lista.</em></h2><p>Solicita estas piezas tal como están o revisa medidas y presupuesto antes de hablar con nosotros.</p><button className="proposal-path" type="button" onClick={() => chooseProposalRoute('direct')}><span><Check/></span><div><b>Solicitar estas piezas</b><small>Confirma disponibilidad, acabados y entrega.</small></div><ArrowRight/></button><button className="proposal-path" type="button" onClick={() => chooseProposalRoute('review')}><span><Ruler/></span><div><b>Revisar si encajan</b><small>Usa medidas y presupuesto para una recomendación más precisa.</small></div><ArrowRight/></button><Link className="proposal-add-items" to="/catalog">Agregar otra pieza <ArrowRight/></Link></div> : <>
