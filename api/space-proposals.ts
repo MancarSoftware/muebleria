@@ -1,8 +1,12 @@
 type ProposalItem = { productId?: unknown; colorName?: unknown };
+type ProposalSpace = {
+  roomType?: unknown; roomWidthCm?: unknown; roomDepthCm?: unknown; budget?: unknown;
+  requiredAreaSqm?: unknown; furnitureFootprintSqm?: unknown; notes?: unknown; items?: ProposalItem[];
+};
 type Proposal = {
   roomType?: unknown; roomWidthCm?: unknown; roomDepthCm?: unknown; budget?: unknown;
   totalPrice?: unknown; requiredAreaSqm?: unknown; furnitureFootprintSqm?: unknown;
-  items?: ProposalItem[]; contactName?: unknown; contactPhone?: unknown; contactEmail?: unknown; notes?: unknown; website?: unknown; privacyAccepted?: unknown;
+  spaces?: ProposalSpace[]; items?: ProposalItem[]; contactName?: unknown; contactPhone?: unknown; contactEmail?: unknown; notes?: unknown; website?: unknown; privacyAccepted?: unknown;
 };
 type Request = { method?: string; body?: Proposal };
 type Response = { status: (statusCode: number) => { json: (body: unknown) => void } };
@@ -16,6 +20,7 @@ export default async function handler(request: Request, response: Response) {
   const name = text(proposal?.contactName, 100);
   const phone = text(proposal?.contactPhone, 10);
   const items = Array.isArray(proposal?.items) ? proposal.items.slice(0, 20) : [];
+  const spaces = Array.isArray(proposal?.spaces) ? proposal.spaces.slice(0, 10) : [];
   if (text(proposal?.website)) return response.status(204).json({ id: 'ignored' });
   const productIds = items.map((item) => text(item.productId, 100));
   if (name.length < 2 || !/^\d{10}$/.test(phone) || proposal?.privacyAccepted !== true || !items.length || new Set(productIds).size !== items.length || !productIds.every(isUuid)) {
@@ -41,6 +46,16 @@ export default async function handler(request: Request, response: Response) {
         p_budget: typeof proposal?.budget === 'number' ? proposal.budget : null,
         p_required_area_sqm: typeof proposal?.requiredAreaSqm === 'number' ? proposal.requiredAreaSqm : null,
         p_furniture_footprint_sqm: typeof proposal?.furnitureFootprintSqm === 'number' ? proposal.furnitureFootprintSqm : null,
+        p_spaces: spaces.map((space) => ({
+          room_type: text(space.roomType, 40),
+          room_width_cm: typeof space.roomWidthCm === 'number' ? space.roomWidthCm : null,
+          room_depth_cm: typeof space.roomDepthCm === 'number' ? space.roomDepthCm : null,
+          budget: typeof space.budget === 'number' ? space.budget : null,
+          required_area_sqm: typeof space.requiredAreaSqm === 'number' ? space.requiredAreaSqm : null,
+          furniture_footprint_sqm: typeof space.furnitureFootprintSqm === 'number' ? space.furnitureFootprintSqm : null,
+          notes: text(space.notes, 500) || null,
+          items: (Array.isArray(space.items) ? space.items.slice(0, 20) : []).map((item) => ({ product_id: text(item.productId, 100), color_name: text(item.colorName, 80) || null })),
+        })),
         p_items: items.map((item) => ({ product_id: text(item.productId, 100), color_name: text(item.colorName, 80) || null })),
         p_contact_name: name,
         p_contact_phone: phone,

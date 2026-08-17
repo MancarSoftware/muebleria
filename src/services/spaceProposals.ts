@@ -12,6 +12,17 @@ export type SpaceProposalItem = {
   dimensions: string;
 };
 
+export type SpaceProposalRoom = {
+  roomType: string;
+  roomWidthCm?: number | null;
+  roomDepthCm?: number | null;
+  budget?: number | null;
+  requiredAreaSqm?: number | null;
+  furnitureFootprintSqm?: number | null;
+  notes?: string;
+  items: Array<Pick<SpaceProposalItem, 'productId' | 'colorName'>>;
+};
+
 export type SpaceProposalInput = {
   roomType: string;
   roomWidthCm?: number | null;
@@ -20,6 +31,7 @@ export type SpaceProposalInput = {
   totalPrice: number;
   requiredAreaSqm?: number | null;
   furnitureFootprintSqm?: number | null;
+  spaces?: SpaceProposalRoom[];
   items: SpaceProposalItem[];
   contactName: string;
   contactPhone: string;
@@ -39,6 +51,16 @@ function rpcPayload(input: SpaceProposalInput) {
     p_budget: input.budget ?? null,
     p_required_area_sqm: input.requiredAreaSqm ?? null,
     p_furniture_footprint_sqm: input.furnitureFootprintSqm ?? null,
+    p_spaces: (input.spaces ?? []).map((space) => ({
+      room_type: space.roomType,
+      room_width_cm: space.roomWidthCm ?? null,
+      room_depth_cm: space.roomDepthCm ?? null,
+      budget: space.budget ?? null,
+      required_area_sqm: space.requiredAreaSqm ?? null,
+      furniture_footprint_sqm: space.furnitureFootprintSqm ?? null,
+      notes: space.notes?.trim() || null,
+      items: space.items.map((item) => ({ product_id: item.productId, color_name: item.colorName ?? null })),
+    })),
     p_items: input.items.map((item) => ({ product_id: item.productId, color_name: item.colorName ?? null })),
     p_contact_name: input.contactName.trim(),
     p_contact_phone: input.contactPhone.trim(),
@@ -79,7 +101,7 @@ export async function saveSpaceProposal(input: SpaceProposalInput): Promise<Save
   if (!supabase) throw new Error('El registro de propuestas aún no está configurado.');
   const { data, error } = await supabase.rpc('submit_space_proposal_with_consent', rpcPayload(input));
   if (error) {
-    if (error.code === 'PGRST202' || error.code === '42883') throw new Error('Falta activar el registro de propuestas. Ejecuta la migración 202608120009 en Supabase.');
+    if (error.code === 'PGRST202' || error.code === '42883') throw new Error('Falta activar el registro de propuestas. Ejecuta las migraciones 202608120009 y 202608170002 en Supabase.');
     throw new Error(error.message);
   }
   return { id: data as string };

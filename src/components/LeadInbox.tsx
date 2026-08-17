@@ -29,6 +29,14 @@ function matchesFilter(lead: Lead, filter: LeadFilter) {
   return filter === 'all' || lead.status === filter;
 }
 
+function hasRoomBreakdown(lead: Lead) {
+  return lead.source === 'space_planner' && lead.spaces.length > 0;
+}
+
+function roomMeasurements(room: Lead['spaces'][number]) {
+  return room.roomWidthCm && room.roomDepthCm ? `${room.roomWidthCm} × ${room.roomDepthCm} cm` : 'Por confirmar';
+}
+
 function pageFor(leads: Lead[], filter: LeadFilter, requestedPage: number) {
   const items = leads.filter((lead) => matchesFilter(lead, filter));
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
@@ -39,7 +47,9 @@ function pageFor(leads: Lead[], filter: LeadFilter, requestedPage: number) {
 function whatsappForLead(lead: Lead) {
   const rawPhone = lead.contactPhone.replace(/\D/g, '');
   const phone = rawPhone.length === 10 && rawPhone.startsWith('0') ? `593${rawPhone.slice(1)}` : rawPhone;
-  const pieces = lead.items.map((item) => `${item.name}${item.colorName ? ` (${item.colorName})` : ''}`).join(', ');
+  const pieces = hasRoomBreakdown(lead)
+    ? lead.spaces.map((room) => `${room.roomType}: ${room.items.map((item) => lead.items.find((catalogItem) => catalogItem.productId === item.productId)?.name ?? 'pieza').join(', ')}`).join(' · ')
+    : lead.items.map((item) => `${item.name}${item.colorName ? ` (${item.colorName})` : ''}`).join(', ');
   const context = lead.source === 'contact_form'
     ? `tu consulta para ${lead.roomType.toLowerCase()}`
     : `tu propuesta para ${lead.roomType.toLowerCase()} con ${pieces}`;
@@ -49,6 +59,8 @@ function whatsappForLead(lead: Lead) {
 function leadSummary(lead: Lead) {
   return lead.source === 'contact_form'
     ? `Consulta de contacto · ${lead.roomType}`
+    : hasRoomBreakdown(lead)
+      ? `${lead.spaces.length} ${lead.spaces.length === 1 ? 'ambiente' : 'ambientes'} · ${lead.items.length} ${lead.items.length === 1 ? 'pieza' : 'piezas'}`
     : `${lead.roomType} · ${lead.items.length} ${lead.items.length === 1 ? 'pieza' : 'piezas'}`;
 }
 
@@ -64,6 +76,7 @@ export function LeadInbox() {
   const [saveConfirmation, setSaveConfirmation] = useState('');
 
   const selected = leads.find((lead) => lead.id === selectedId) ?? null;
+  const selectedHasRooms = selected ? hasRoomBreakdown(selected) : false;
   const leadPage = useMemo(() => pageFor(leads, filter, pageByFilter[filter]), [filter, leads, pageByFilter]);
   const summary = useMemo(() => ({ total: leads.length, new: leads.filter((lead) => lead.status === 'new').length, active: leads.filter((lead) => lead.status === 'contacted' || lead.status === 'qualified').length, closed: leads.filter((lead) => lead.status === 'closed').length }), [leads]);
 
@@ -80,7 +93,7 @@ export function LeadInbox() {
       });
     } catch (error) {
       const detail = error as { code?: string; message?: string };
-      setError(detail.code === '42703' || detail.code === '42P01' ? 'Activa la bandeja de solicitudes con la migración 202608120006 en Supabase.' : 'No pudimos cargar las solicitudes. Revisa los permisos de Supabase.');
+      setError(detail.code === '42703' ? 'Actualiza la bandeja con la migración 202608170002 en Supabase.' : detail.code === '42P01' ? 'Activa la bandeja de solicitudes con la migración 202608120006 en Supabase.' : 'No pudimos cargar las solicitudes. Revisa los permisos de Supabase.');
     } finally { setLoading(false); }
   };
 
@@ -132,8 +145,8 @@ export function LeadInbox() {
       {selected ? <article className="lead-detail">
         <header><div><span className={`lead-status ${selected.status}`}>{statusLabels[selected.status]}</span><h3>{selected.contactName}</h3><time>Recibida {dateTime.format(new Date(selected.createdAt))}</time></div><select value={selected.status} onChange={(event) => void saveLead(event.target.value as LeadStatus)} disabled={saving}>{statusOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></header>
         <div className="lead-contact-actions"><a href={whatsappForLead(selected)} target="_blank" rel="noreferrer"><MessageCircle/> Escribir por WhatsApp</a>{selected.contactEmail && <a href={`mailto:${selected.contactEmail}?subject=${encodeURIComponent('Tu propuesta Casa Nativa')}`}><Mail/> Enviar correo</a>}</div>
-        <dl className="lead-facts"><div><dt>Espacio</dt><dd>{selected.roomType}</dd></div><div><dt>Medidas</dt><dd>{selected.roomWidthCm && selected.roomDepthCm ? `${selected.roomWidthCm} × ${selected.roomDepthCm} cm` : 'Por confirmar'}</dd></div><div><dt>Presupuesto</dt><dd>{selected.budget ? money.format(selected.budget) : 'Por definir'}</dd></div><div><dt>{selected.source === 'contact_form' ? 'Solicitud' : 'Selección'}</dt><dd>{selected.source === 'contact_form' ? 'Consulta directa' : money.format(selected.totalPrice)}</dd></div></dl>
-        {selected.items.length > 0 && <section className="lead-pieces"><p className="eyebrow">PIEZAS SOLICITADAS</p>{selected.items.map((item) => <div key={item.productId}><span><b>{item.name}</b>{item.colorName && <small>{item.colorName}</small>}</span><span>{money.format(item.price)}</span></div>)}</section>}
+        <dl className="lead-facts"><div><dt>{selectedHasRooms ? 'Ambientes' : 'Espacio'}</dt><dd>{selectedHasRooms ? `${selected.spaces.length} organizados` : selected.roomType}</dd></div><div><dt>Medidas</dt><dd>{selectedHasRooms ? 'Por ambiente' : selected.roomWidthCm && selected.roomDepthCm ? `${selected.roomWidthCm} × ${selected.roomDepthCm} cm` : 'Por confirmar'}</dd></div><div><dt>Presupuesto</dt><dd>{selected.budget ? money.format(selected.budget) : 'Por definir'}</dd></div><div><dt>{selected.source === 'contact_form' ? 'Solicitud' : 'Selección'}</dt><dd>{selected.source === 'contact_form' ? 'Consulta directa' : money.format(selected.totalPrice)}</dd></div></dl>
+        {selectedHasRooms ? <section className="lead-spaces"><p className="eyebrow">AMBIENTES Y PIEZAS</p>{selected.spaces.map((room, index) => <article className="lead-space" key={`${room.roomType}-${index}`}><header><b>{room.roomType}</b><span>{roomMeasurements(room)}</span></header><div className="lead-space-meta"><span>{room.budget ? `Presupuesto ${money.format(room.budget)}` : 'Presupuesto por definir'}</span>{room.requiredAreaSqm ? <span>Área recomendada: {Number(room.requiredAreaSqm).toFixed(1)} m²</span> : null}</div><div className="lead-space-pieces">{room.items.map((item) => { const catalogItem = selected.items.find((candidate) => candidate.productId === item.productId); return <div key={item.productId}><span><b>{catalogItem?.name ?? 'Pieza seleccionada'}</b>{item.colorName && <small>{item.colorName}</small>}</span><span>{catalogItem ? money.format(catalogItem.price) : ''}</span></div>; })}</div>{room.notes && <p className="lead-space-note">{room.notes}</p>}</article>)}</section> : selected.items.length > 0 && <section className="lead-pieces"><p className="eyebrow">PIEZAS SOLICITADAS</p>{selected.items.map((item) => <div key={item.productId}><span><b>{item.name}</b>{item.colorName && <small>{item.colorName}</small>}</span><span>{money.format(item.price)}</span></div>)}</section>}
         {selected.notes && <section className="lead-client-note"><p className="eyebrow">{selected.source === 'contact_form' ? 'MENSAJE DEL CLIENTE' : 'NOTA DEL CLIENTE'}</p><p>{selected.notes}</p></section>}
         <section className="lead-followup"><p className="eyebrow"><StickyNote/> SEGUIMIENTO PRIVADO</p><textarea value={note} maxLength={1000} onChange={(event) => setNote(event.target.value)} placeholder="Ej. Hablamos por WhatsApp; enviar alternativa en madera clara."/><button type="button" className="dark-button" onClick={() => void saveLead(selected.status)} disabled={saving}>{saving ? <LoaderCircle className="spin"/> : <><Send/> Guardar seguimiento</>}</button>{saveConfirmation && <p className="lead-save-confirmation" role="status"><Check/> {saveConfirmation}</p>}</section>
       </article> : <div className="lead-detail lead-detail-empty"><ClipboardList/><h3>Elige una solicitud</h3><p>Selecciona una conversación para revisar la propuesta y continuar el seguimiento.</p></div>}

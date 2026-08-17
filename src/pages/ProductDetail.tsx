@@ -6,7 +6,7 @@ import { ProductCard } from '../components/ProductCard';
 import { whatsappLink } from '../config/business';
 import { useCatalog } from '../hooks/useCatalog';
 import { productColorVariants } from '../lib/colorVariants';
-import { useSpacePlanner } from '../hooks/useSpacePlanner';
+import { roomForProductCategory, useSpacePlanner } from '../hooks/useSpacePlanner';
 import { trackEvent } from '../lib/analytics';
 
 export function ProductDetail() {
@@ -71,7 +71,7 @@ export function ProductDetail() {
         </dl>
         <CatalogAdvisor context={product} products={products}/>
         <a className="dark-button full" href={whatsappLink(`Hola, me interesa ${product.name} en color ${selectedColorName}. La vi en el sitio web y quisiera más información.`)} onClick={() => trackEvent('contact_whatsapp', { location: 'product_detail', item_id: product.id, item_name: product.name })} target="_blank" rel="noreferrer">Consultar por WhatsApp</a>
-        <button className="save" onClick={() => { if (inSpace) { planner.remove(product.id); trackEvent('remove_from_space', { item_id: product.id, item_name: product.name }); } else { planner.add(product.id, selectedColorName); trackEvent('add_to_space', { item_id: product.id, item_name: product.name, item_category: product.category, value: product.price, currency: 'USD' }); } }}><Heart fill={inSpace ? 'currentColor' : 'none'}/> {inSpace ? 'En mi espacio' : 'Añadir a mi espacio'}</button>
+        <button className="save" onClick={() => { if (inSpace) { planner.remove(product.id); trackEvent('remove_from_space', { item_id: product.id, item_name: product.name }); } else { planner.add(product.id, selectedColorName, roomForProductCategory(product.category)); trackEvent('add_to_space', { item_id: product.id, item_name: product.name, item_category: product.category, value: product.price, currency: 'USD' }); } }}><Heart fill={inSpace ? 'currentColor' : 'none'}/> {inSpace ? 'En mi espacio' : 'Añadir a mi espacio'}</button>
         <ul>{['Materiales seleccionados para durar', 'Entrega coordinada y atención personal', 'Asesoría para tu espacio'].map((item) => <li key={item}><Check/>{item}</li>)}</ul>
       </div>
     </div>

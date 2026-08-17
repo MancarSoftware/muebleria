@@ -1,8 +1,19 @@
 type ProposalItem = {
+  productId?: string;
   name?: string;
   category?: string;
   colorName?: string;
   price?: number;
+};
+
+type ProposalRoom = {
+  roomType?: string;
+  roomWidthCm?: number | null;
+  roomDepthCm?: number | null;
+  budget?: number | null;
+  requiredAreaSqm?: number | null;
+  notes?: string | null;
+  items?: ProposalItem[];
 };
 
 type Proposal = {
@@ -18,6 +29,7 @@ type Proposal = {
   budget?: number | null;
   total_price?: number;
   required_area_sqm?: number | null;
+  spaces?: ProposalRoom[];
   items?: ProposalItem[];
   notes?: string | null;
 };
@@ -36,6 +48,16 @@ function money(value?: number | null) {
   return value === null || value === undefined ? 'Por definir' : `$${Number(value).toLocaleString('en-US')}`;
 }
 
+function roomDetails(rooms: ProposalRoom[]) {
+  return rooms.map((room) => {
+    const measurements = [room.roomWidthCm, room.roomDepthCm].every((value) => typeof value === 'number')
+      ? `${room.roomWidthCm! / 100} m × ${room.roomDepthCm! / 100} m`
+      : 'Por confirmar';
+    const items = (room.items ?? []).map((item) => `<li><strong>${escapeHtml(item.name ?? 'Pieza')}</strong>${item.colorName ? ` · ${escapeHtml(item.colorName)}` : ''}<br><span>${escapeHtml(item.category ?? '')} · ${money(item.price)}</span></li>`).join('');
+    return `<article style="border-top:1px solid #ded5c6;padding-top:18px;margin-top:18px"><p style="margin:0 0 8px"><strong>${escapeHtml(room.roomType ?? 'Ambiente')}</strong> · ${measurements}</p><p style="margin:0 0 10px"><strong>Presupuesto:</strong> ${money(room.budget)}${room.requiredAreaSqm ? ` · Área orientativa: ${room.requiredAreaSqm} m²` : ''}</p><ul style="padding-left:18px;line-height:1.6;margin:0">${items}</ul>${room.notes ? `<p style="margin:12px 0 0"><strong>Nota:</strong> ${escapeHtml(room.notes)}</p>` : ''}</article>`;
+  }).join('');
+}
+
 function proposalEmail(proposal: Proposal) {
   if (proposal.source === 'contact_form') {
     return `<!doctype html><html><body style="margin:0;background:#f3efe6;color:#20221e;font-family:Arial,sans-serif"><main style="max-width:620px;margin:0 auto;padding:32px"><p style="letter-spacing:2px;font-size:11px">NUEVA CONSULTA · CASA NATIVA</p><h1 style="font-family:Georgia,serif;font-size:38px;font-weight:500;margin:10px 0 26px">${escapeHtml(proposal.contact_name ?? 'Nuevo visitante')} quiere asesoría.</h1><section style="background:#fffdf8;padding:24px;border:1px solid #ded5c6"><p><strong>WhatsApp:</strong> ${escapeHtml(proposal.contact_phone ?? 'No indicado')}</p><p><strong>Correo:</strong> ${escapeHtml(proposal.contact_email ?? 'No indicado')}</p><p><strong>Espacio:</strong> ${escapeHtml(proposal.room_type ?? 'Por definir')}</p><p><strong>Mensaje:</strong><br>${escapeHtml(proposal.notes ?? 'No indicó detalles adicionales.')}</p></section><p style="font-size:12px;color:#6f695e">Solicitud ${escapeHtml(proposal.id ?? '')} · revísala en el administrador.</p></main></body></html>`;
@@ -44,8 +66,12 @@ function proposalEmail(proposal: Proposal) {
     ? `${proposal.room_width_cm! / 100} m × ${proposal.room_depth_cm! / 100} m`
     : 'Por definir';
   const items = (proposal.items ?? []).map((item) => `<li><strong>${escapeHtml(item.name ?? 'Pieza')}</strong>${item.colorName ? ` · ${escapeHtml(item.colorName)}` : ''}<br><span>${escapeHtml(item.category ?? '')} · ${money(item.price)}</span></li>`).join('');
-  const notes = proposal.notes ? `<p><strong>Notas:</strong><br>${escapeHtml(proposal.notes)}</p>` : '';
-  return `<!doctype html><html><body style="margin:0;background:#f3efe6;color:#20221e;font-family:Arial,sans-serif"><main style="max-width:620px;margin:0 auto;padding:32px"><p style="letter-spacing:2px;font-size:11px">NUEVA PROPUESTA · CASA NATIVA</p><h1 style="font-family:Georgia,serif;font-size:38px;font-weight:500;margin:10px 0 26px">${escapeHtml(proposal.contact_name ?? 'Nuevo visitante')} quiere asesoría.</h1><section style="background:#fffdf8;padding:24px;border:1px solid #ded5c6"><p><strong>WhatsApp:</strong> ${escapeHtml(proposal.contact_phone ?? 'No indicado')}</p><p><strong>Correo:</strong> ${escapeHtml(proposal.contact_email ?? 'No indicado')}</p><p><strong>Espacio:</strong> ${escapeHtml(proposal.room_type ?? 'Por definir')} · ${room}</p><p><strong>Presupuesto:</strong> ${money(proposal.budget)} · <strong>Total:</strong> ${money(proposal.total_price)}</p><p><strong>Área orientativa requerida:</strong> ${proposal.required_area_sqm ? `${proposal.required_area_sqm} m²` : 'Por calcular'}</p><hr style="border:0;border-top:1px solid #ded5c6;margin:24px 0"><strong>Piezas elegidas</strong><ul style="padding-left:18px;line-height:1.6">${items}</ul>${notes}</section><p style="font-size:12px;color:#6f695e">Propuesta ${escapeHtml(proposal.id ?? '')} · revisa y actualiza el estado en Supabase.</p></main></body></html>`;
+  const groupedRooms = Array.isArray(proposal.spaces) ? proposal.spaces.filter((space) => Array.isArray(space.items) && space.items.length > 0) : [];
+  const breakdown = groupedRooms.length
+    ? `<hr style="border:0;border-top:1px solid #ded5c6;margin:24px 0"><strong>Ambientes y piezas</strong>${roomDetails(groupedRooms)}`
+    : `<p><strong>Espacio:</strong> ${escapeHtml(proposal.room_type ?? 'Por definir')} · ${room}</p><p><strong>Presupuesto:</strong> ${money(proposal.budget)}</p><p><strong>Área orientativa requerida:</strong> ${proposal.required_area_sqm ? `${proposal.required_area_sqm} m²` : 'Por calcular'}</p><hr style="border:0;border-top:1px solid #ded5c6;margin:24px 0"><strong>Piezas elegidas</strong><ul style="padding-left:18px;line-height:1.6">${items}</ul>`;
+  const notes = proposal.notes ? `<p><strong>Notas generales:</strong><br>${escapeHtml(proposal.notes)}</p>` : '';
+  return `<!doctype html><html><body style="margin:0;background:#f3efe6;color:#20221e;font-family:Arial,sans-serif"><main style="max-width:620px;margin:0 auto;padding:32px"><p style="letter-spacing:2px;font-size:11px">NUEVA PROPUESTA · CASA NATIVA</p><h1 style="font-family:Georgia,serif;font-size:38px;font-weight:500;margin:10px 0 26px">${escapeHtml(proposal.contact_name ?? 'Nuevo visitante')} quiere asesoría.</h1><section style="background:#fffdf8;padding:24px;border:1px solid #ded5c6"><p><strong>WhatsApp:</strong> ${escapeHtml(proposal.contact_phone ?? 'No indicado')}</p><p><strong>Correo:</strong> ${escapeHtml(proposal.contact_email ?? 'No indicado')}</p><p><strong>Total de la selección:</strong> ${money(proposal.total_price)}</p>${breakdown}${notes}</section><p style="font-size:12px;color:#6f695e">Propuesta ${escapeHtml(proposal.id ?? '')} · revísala en el administrador.</p></main></body></html>`;
 }
 
 Deno.serve(async (request) => {
