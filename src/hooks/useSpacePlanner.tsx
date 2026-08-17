@@ -28,6 +28,7 @@ type SpacePlannerState = {
   remove: (productId: string) => void;
   updateColor: (productId: string, colorName: string) => void;
   assignRoom: (productId: string, roomId: string) => void;
+  assignRoomType: (productId: string, roomType: SpaceRoomType) => void;
   addRoom: (roomType?: SpaceRoomType) => void;
   updateRoom: (roomId: string, values: Partial<Omit<SpaceRoom, 'id'>>) => void;
   removeRoom: (roomId: string) => void;
@@ -158,6 +159,12 @@ export function SpacePlannerProvider({ children }: { children: React.ReactNode }
     assignRoom: (productId, roomId) => setSpace((current) => current.rooms.some((room) => room.id === roomId)
       ? { ...current, items: current.items.map((item) => item.productId === productId ? { ...item, roomId } : item) }
       : current),
+    assignRoomType: (productId, roomType) => setSpace((current) => {
+      const existingRoom = current.rooms.find((room) => room.roomType === roomType);
+      const targetRoom = existingRoom ?? newRoom(roomType);
+      const rooms = existingRoom ? current.rooms : [...current.rooms, targetRoom];
+      return { rooms, items: current.items.map((item) => item.productId === productId ? { ...item, roomId: targetRoom.id } : item) };
+    }),
     addRoom: (roomType = 'Sala') => setSpace((current) => ({ ...current, rooms: [...current.rooms, newRoom(roomType)] })),
     updateRoom: (roomId, values) => setSpace((current) => ({ ...current, rooms: current.rooms.map((room) => room.id === roomId ? { ...room, ...values } : room) })),
     removeRoom: (roomId) => setSpace((current) => {
