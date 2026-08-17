@@ -13,8 +13,7 @@ import { saveSpaceProposal } from '../services/spaceProposals';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 type ProposalRoute = 'choose' | 'direct' | 'review';
 
-function roomFeedback(estimate: SpaceEstimate, budget: number | null, total: number) {
-  const budgetStatus = budget ? total <= budget : null;
+function roomFeedback(estimate: SpaceEstimate) {
   const spaceHeading = estimate.roomAreaSqm === null
     ? 'Añade las medidas del ambiente'
     : estimate.fitsArea
@@ -28,7 +27,7 @@ function roomFeedback(estimate: SpaceEstimate, budget: number | null, total: num
         ? `El ambiente tiene ${estimate.roomAreaSqm.toFixed(1)} m²; la selección reserva ${estimate.requiredAreaSqm.toFixed(1)} m² entre piezas y paso.`
         : `El ambiente tiene ${estimate.roomAreaSqm.toFixed(1)} m²; recomendamos cerca de ${estimate.requiredAreaSqm.toFixed(1)} m² para las piezas y su circulación.`;
 
-  return <div className="space-feedback"><p><Check/><span><b>{budgetStatus === null ? 'Presupuesto por definir' : budgetStatus ? 'La selección está dentro del presupuesto' : 'La selección supera el presupuesto'}</b>{budgetStatus === null ? ' Podemos confirmar alternativas sin usar un rango de inversión.' : budgetStatus ? ` Quedan $${(budget! - total).toLocaleString('en-US')} para complementar.` : ` Ajustemos $${(total - budget!).toLocaleString('en-US')} juntos.`}</span></p><p><MapPin/><span><b>{spaceHeading}</b>{spaceDetail}</span></p></div>;
+  return <div className="space-feedback"><p><MapPin/><span><b>{spaceHeading}</b>{spaceDetail}</span></p></div>;
 }
 
 function roomLabel(room: SpaceRoom, position: number, rooms: SpaceRoom[]) {
@@ -64,7 +63,6 @@ export function SpacePlanner() {
     const items = reviewItems.filter((item) => item.roomId === room.id);
     const widthValue = Number(room.width) || null;
     const depthValue = Number(room.depth) || null;
-    const budgetValue = Number(room.budget) || null;
     return {
       room,
       position,
@@ -73,7 +71,6 @@ export function SpacePlanner() {
       total: items.reduce((sum, item) => sum + item.product.price, 0),
       widthValue,
       depthValue,
-      budgetValue,
       estimate: estimateSpace(items.map((item) => item.product), widthValue, depthValue),
     };
   }), [planner.rooms, reviewItems]);
@@ -86,7 +83,7 @@ export function SpacePlanner() {
   const proposalRoom = proposalRoute === 'review' ? activeGroups.map((group) => group.label).join(', ') || 'Por definir' : 'Selección de piezas';
   const selectedPiecesMessage = proposalItems.map((item) => `• ${item.product.name}${item.colorName ? ` (${item.colorName})` : ''} — $${item.product.price.toLocaleString('en-US')}`).join('\n');
   const message = proposalRoute === 'review'
-    ? `Hola, quiero asesoría para estos ambientes:\n\n${activeGroups.map((group) => `${group.label}\nMedidas disponibles: ${group.room.width || 'por definir'} m × ${group.room.depth || 'por definir'} m\nPresupuesto: ${group.budgetValue ? `$${group.budgetValue.toLocaleString('en-US')}` : 'por definir'}\nPiezas:\n${group.items.map((item) => `• ${item.product.name}${item.colorName ? ` (${item.colorName})` : ''} — $${item.product.price.toLocaleString('en-US')}`).join('\n')}${group.room.notes.trim() ? `\nNota del ambiente: ${group.room.notes.trim()}` : ''}`).join('\n\n')}\n\nTotal estimado: $${proposalTotal.toLocaleString('en-US')}.`
+    ? `Hola, quiero asesoría para estos ambientes:\n\n${activeGroups.map((group) => `${group.label}\nMedidas disponibles: ${group.room.width || 'por definir'} m × ${group.room.depth || 'por definir'} m\nPiezas:\n${group.items.map((item) => `• ${item.product.name}${item.colorName ? ` (${item.colorName})` : ''} — $${item.product.price.toLocaleString('en-US')}`).join('\n')}${group.room.notes.trim() ? `\nNota del ambiente: ${group.room.notes.trim()}` : ''}`).join('\n\n')}\n\nTotal estimado de las piezas: $${proposalTotal.toLocaleString('en-US')}.`
     : `Hola, me interesan estas piezas:\n${selectedPiecesMessage}\n\nTotal estimado: $${proposalTotal.toLocaleString('en-US')}.\n\n¿Podrían confirmarme disponibilidad, acabados y plazo de entrega?`;
 
   const chooseProposalRoute = (route: Exclude<ProposalRoute, 'choose'>) => {
@@ -122,7 +119,7 @@ export function SpacePlanner() {
         roomType: proposalRoom,
         roomWidthCm: null,
         roomDepthCm: null,
-        budget: proposalRoute === 'review' ? activeGroups.reduce((sum, group) => sum + (group.budgetValue ?? 0), 0) || null : null,
+        budget: null,
         totalPrice: proposalTotal,
         requiredAreaSqm: proposalRoute === 'review' ? activeGroups.reduce((sum, group) => sum + group.estimate.requiredAreaSqm, 0) : null,
         furnitureFootprintSqm: proposalRoute === 'review' ? activeGroups.reduce((sum, group) => sum + group.estimate.furnitureFootprintSqm, 0) : null,
@@ -130,7 +127,7 @@ export function SpacePlanner() {
           roomType: group.label,
           roomWidthCm: group.widthValue ? Math.round(group.widthValue * 100) : null,
           roomDepthCm: group.depthValue ? Math.round(group.depthValue * 100) : null,
-          budget: group.budgetValue,
+          budget: null,
           requiredAreaSqm: group.estimate.requiredAreaSqm,
           furnitureFootprintSqm: group.estimate.furnitureFootprintSqm,
           notes: group.room.notes,
@@ -179,7 +176,39 @@ export function SpacePlanner() {
       <aside className="space-brief">
         {!selectedItems.length ? <div className="space-general-inquiry"><p className="eyebrow">¿AÚN NO TIENES PIEZAS?</p><h2>Empecemos por<br/><em>lo que buscas.</em></h2><p>Cuéntanos qué necesitas y te ayudamos a empezar sin elegir un producto todavía.</p><Link to="/contact#contact-form">Enviar una consulta <ArrowRight/></Link></div> : proposalRoute === 'choose' ? <div className="proposal-paths"><p className="eyebrow">¿CÓMO QUIERES CONTINUAR?</p><h2>Tu selección<br/>ya está <em>lista.</em></h2><p>Puedes solicitar todas las piezas directamente o revisar solo las que te generen dudas de medidas.</p><button className="proposal-path" type="button" onClick={() => chooseProposalRoute('direct')}><span><Check/></span><div><b>Solicitar estas piezas</b><small>Confirma disponibilidad, acabados y entrega.</small></div><ArrowRight/></button><button className="proposal-path" type="button" onClick={() => chooseProposalRoute('review')}><span><Ruler/></span><div><b>¿Tienes dudas sobre las medidas?</b><small>Elige solo las piezas que quieres comprobar y dónde las ubicarías.</small></div><ArrowRight/></button><Link className="proposal-add-items" to="/catalog">Agregar otra pieza <ArrowRight/></Link></div> : <>
           <div className="proposal-route-head"><p className="eyebrow">{proposalRoute === 'review' ? 'REVISIÓN OPCIONAL DE MEDIDAS' : 'SOLICITAR PIEZAS'}</p><h2>{proposalRoute === 'review' ? <>Hagamos que<br/><em>sí encaje.</em></> : <>Hablemos de tu<br/><em>selección.</em></>}</h2><p>{proposalRoute === 'review' ? 'Primero escoge las piezas que quieres comprobar; luego indícanos en qué ambiente planeas ubicarlas.' : 'No necesitas medidas ni presupuesto. Solo confirma cómo podemos contactarte.'}</p><button className="proposal-change-route" type="button" onClick={() => { setProposalRoute('choose'); setSaveState('idle'); setSaveError(''); }}>Cambiar opción</button></div>
-          {proposalRoute === 'review' && <div className="room-planner"><div className="room-planner-intro"><p><b>¿Tienes dudas sobre cómo encajan las medidas?</b> Esta revisión es opcional: elige únicamente las piezas que quieras comprobar.</p><small>Las medidas que pedimos son las del ambiente completo, no las del mueble.</small></div>{!reviewItems.length ? <section className="review-piece-picker"><p className="eyebrow">PRIMERA PIEZA A REVISAR</p><h3>¿Con cuál quieres empezar?</h3><p>Selecciona una pieza; después podrás añadir otra si quieres revisarlas juntas.</p><div>{selectedItems.map((item) => <button type="button" key={item.product.id} onClick={() => addToReview(item.product.id)}><span><b>{item.product.name}</b><small>{item.product.category} · ${item.product.price.toLocaleString('en-US')}</small></span><ArrowRight/></button>)}</div></section> : <><section className="review-piece-list"><p className="eyebrow">PIEZAS QUE QUIERES REVISAR</p>{reviewItems.map((item) => <article key={item.product.id}><div><b>{item.product.name}</b><small>{item.product.category}</small></div><label>¿En qué ambiente la ubicarías?<small>Elige el ambiente completo, no las medidas del mueble.</small><select value={planner.rooms.find((room) => room.id === item.roomId)?.roomType ?? 'Sala'} onChange={(event) => planner.assignRoomType(item.product.id, event.target.value as SpaceRoom['roomType'])}>{spaceRoomTypes.map((roomType) => <option key={roomType}>{roomType}</option>)}</select></label><button type="button" onClick={() => removeFromReview(item.product.id)} aria-label={`Quitar ${item.product.name} de la revisión`}><Trash2/></button></article>)}{reviewCandidates.length > 0 && (!isAddingReviewPiece ? <button className="review-add-piece" type="button" onClick={() => setIsAddingReviewPiece(true)}>+ Añadir otra pieza</button> : <div className="review-next-piece"><p>Elige la siguiente pieza que quieres revisar:</p>{reviewCandidates.map((item) => <button type="button" key={item.product.id} onClick={() => addToReview(item.product.id)}>{item.product.name} <ArrowRight/></button>)}<button type="button" onClick={() => setIsAddingReviewPiece(false)}>Cancelar</button></div>)}</section>{activeReviewGroup && <><div className="room-stepper" aria-label="Ambientes de la propuesta">{activeGroups.map((group, index) => <button type="button" key={group.room.id} className={index === activeReviewIndex ? 'active' : ''} onClick={() => setReviewRoomIndex(index)}><span>{index + 1}</span><b>{group.label}</b><small>{group.items.length} {group.items.length === 1 ? 'pieza' : 'piezas'}</small></button>)}</div><section className="room-editor" key={activeReviewGroup.room.id}><div className="room-editor-head"><div><p className="eyebrow">AMBIENTE {activeReviewIndex + 1} DE {activeGroups.length}</p><h3>Revisemos tu {activeReviewGroup.label.toLowerCase()}.</h3></div></div><p className="room-editor-pieces">Aquí incluimos: <b>{activeReviewGroup.items.map((item) => item.product.name).join(', ')}</b>.</p><fieldset><legend><Ruler/> Medidas del ambiente <small>(opcionales)</small></legend><div className="measurements"><label>Ancho<input type="text" inputMode="decimal" value={activeReviewGroup.room.width} onChange={(event) => planner.updateRoom(activeReviewGroup.room.id, { width: onlyDecimal(event.target.value) })} placeholder="Ej. 4.2"/></label><span>×</span><label>Fondo<input type="text" inputMode="decimal" value={activeReviewGroup.room.depth} onChange={(event) => planner.updateRoom(activeReviewGroup.room.id, { depth: onlyDecimal(event.target.value) })} placeholder="Ej. 3.5"/></label></div></fieldset><fieldset><legend>Presupuesto para este ambiente <small>(opcional)</small></legend><label className="budget-input">$<input type="text" inputMode="numeric" value={activeReviewGroup.room.budget} onChange={(event) => planner.updateRoom(activeReviewGroup.room.id, { budget: onlyDigits(event.target.value, 9) })} placeholder="Ej. 2500"/></label></fieldset><label className="room-editor-note">Algo sobre este ambiente <small>(opcional)</small><textarea value={activeReviewGroup.room.notes} maxLength={500} onChange={(event) => planner.updateRoom(activeReviewGroup.room.id, { notes: event.target.value })} placeholder="Puertas, ventanas, fecha o distribución…"/></label>{roomFeedback(activeReviewGroup.estimate, activeReviewGroup.budgetValue, activeReviewGroup.total)}<div className="room-editor-navigation">{activeReviewIndex > 0 && <button type="button" onClick={() => setReviewRoomIndex(activeReviewIndex - 1)}>Anterior</button>}{activeReviewIndex + 1 < activeGroups.length && <button type="button" onClick={() => setReviewRoomIndex(activeReviewIndex + 1)}>Siguiente: {activeGroups[activeReviewIndex + 1].label} <ArrowRight/></button>}</div></section></>}</>}</div>}
+          {proposalRoute === 'review' && (
+            <div className="room-planner">
+              <div className="room-planner-intro">
+                <p><b>¿Tienes dudas sobre cómo encajan las medidas?</b> Esta revisión es opcional: elige únicamente las piezas que quieras comprobar.</p>
+                <small>Las medidas que pedimos son las del ambiente completo, no las del mueble.</small>
+              </div>
+              {!reviewItems.length ? (
+                <section className="review-piece-picker">
+                  <p className="eyebrow">PRIMERA PIEZA A REVISAR</p>
+                  <h3>¿Con cuál quieres empezar?</h3>
+                  <p>Selecciona una pieza; después podrás añadir otra si quieres revisarlas juntas.</p>
+                  <div>{selectedItems.map((item) => <button type="button" key={item.product.id} onClick={() => addToReview(item.product.id)}><span><b>{item.product.name}</b><small>{item.product.category} · ${item.product.price.toLocaleString('en-US')}</small></span><ArrowRight/></button>)}</div>
+                </section>
+              ) : <>
+                <section className="review-piece-list">
+                  <p className="eyebrow">PIEZAS QUE QUIERES REVISAR</p>
+                  {reviewItems.map((item) => <article key={item.product.id}><div><b>{item.product.name}</b><small>{item.product.category}</small></div><label>¿En qué ambiente la ubicarías?<small>Elige el ambiente completo, no las medidas del mueble.</small><select value={planner.rooms.find((room) => room.id === item.roomId)?.roomType ?? 'Sala'} onChange={(event) => planner.assignRoomType(item.product.id, event.target.value as SpaceRoom['roomType'])}>{spaceRoomTypes.map((roomType) => <option key={roomType}>{roomType}</option>)}</select></label><button type="button" onClick={() => removeFromReview(item.product.id)} aria-label={`Quitar ${item.product.name} de la revisión`}><Trash2/></button></article>)}
+                  {reviewCandidates.length > 0 && (!isAddingReviewPiece ? <button className="review-add-piece" type="button" onClick={() => setIsAddingReviewPiece(true)}>+ Añadir otra pieza</button> : <div className="review-next-piece"><p>Elige la siguiente pieza que quieres revisar:</p>{reviewCandidates.map((item) => <button type="button" key={item.product.id} onClick={() => addToReview(item.product.id)}>{item.product.name} <ArrowRight/></button>)}<button type="button" onClick={() => setIsAddingReviewPiece(false)}>Cancelar</button></div>)}
+                </section>
+                {activeReviewGroup && <>
+                  <div className="room-stepper" aria-label="Ambientes de la propuesta">{activeGroups.map((group, index) => <button type="button" key={group.room.id} className={index === activeReviewIndex ? 'active' : ''} onClick={() => setReviewRoomIndex(index)}><span>{index + 1}</span><b>{group.label}</b><small>{group.items.length} {group.items.length === 1 ? 'pieza' : 'piezas'}</small></button>)}</div>
+                  <section className="room-editor" key={activeReviewGroup.room.id}>
+                    <div className="room-editor-head"><div><p className="eyebrow">AMBIENTE {activeReviewIndex + 1} DE {activeGroups.length}</p><h3>Revisemos tu {activeReviewGroup.label.toLowerCase()}.</h3></div></div>
+                    <p className="room-editor-pieces">Aquí incluimos: <b>{activeReviewGroup.items.map((item) => item.product.name).join(', ')}</b>.</p>
+                    <fieldset><legend><Ruler/> Medidas del ambiente <small>(opcionales)</small></legend><div className="measurements"><label>Ancho<input type="text" inputMode="decimal" value={activeReviewGroup.room.width} onChange={(event) => planner.updateRoom(activeReviewGroup.room.id, { width: onlyDecimal(event.target.value) })} placeholder="Ej. 4.2"/></label><span>×</span><label>Fondo<input type="text" inputMode="decimal" value={activeReviewGroup.room.depth} onChange={(event) => planner.updateRoom(activeReviewGroup.room.id, { depth: onlyDecimal(event.target.value) })} placeholder="Ej. 3.5"/></label></div></fieldset>
+                    <label className="room-editor-note">Algo sobre este ambiente <small>(opcional)</small><textarea value={activeReviewGroup.room.notes} maxLength={500} onChange={(event) => planner.updateRoom(activeReviewGroup.room.id, { notes: event.target.value })} placeholder="Puertas, ventanas, fecha o distribución…"/></label>
+                    {roomFeedback(activeReviewGroup.estimate)}
+                    <div className="room-editor-navigation">{activeReviewIndex > 0 && <button type="button" onClick={() => setReviewRoomIndex(activeReviewIndex - 1)}>Anterior</button>}{activeReviewIndex + 1 < activeGroups.length && <button type="button" onClick={() => setReviewRoomIndex(activeReviewIndex + 1)}>Siguiente: {activeGroups[activeReviewIndex + 1].label} <ArrowRight/></button>}</div>
+                  </section>
+                </>}
+              </>}
+            </div>
+          )}
           {proposalRoute !== 'review' || reviewItems.length > 0 ? <>
           <div className="proposal-contact"><p className="eyebrow">{proposalRoute === 'review' ? 'RECIBE LA REVISIÓN POR AMBIENTES' : 'SOLICITA ESTAS PIEZAS'}</p><div className="proposal-fields"><label>Nombre<input value={contactName} onChange={(event) => setContactName(event.target.value)} autoComplete="name" minLength={2} maxLength={100} placeholder="Tu nombre"/></label><label>WhatsApp<input value={contactPhone} onChange={(event) => setContactPhone(onlyDigits(event.target.value, 10))} autoComplete="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} placeholder="Ej. 0986951419"/></label><label>Correo <small>(opcional)</small><input value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} autoComplete="email" inputMode="email" maxLength={254} placeholder="correo@ejemplo.com"/></label><label>Algo que debamos considerar <small>(opcional)</small><textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={2000} placeholder={proposalRoute === 'review' ? 'Necesidades generales para la propuesta…' : 'Color, acabados o fecha en la que te gustaría recibirlas…'}/></label><label className="legal-consent"><input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)}/><span>Autorizo el uso de mis datos según la <Link to="/privacy" target="_blank">Política de privacidad</Link>. Conozco los <Link to="/terms" target="_blank">Términos</Link>.</span></label><label className="proposal-honeypot" aria-hidden="true">Sitio web<input value={website} onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off"/></label></div></div>
           {saveState === 'saved' ? <div className="proposal-success"><Check/><div><b>{proposalRoute === 'review' ? 'Tu solicitud de revisión quedó registrada.' : 'Tu solicitud quedó registrada.'}</b><span>Cuando quieras, abre WhatsApp para conversar con el showroom.</span></div></div> : <button className="dark-button full" type="button" onClick={saveProposal} disabled={saveState === 'saving'}>{saveState === 'saving' ? 'Guardando…' : proposalRoute === 'review' ? 'Guardar solicitud de revisión' : 'Guardar solicitud'} <ArrowRight/></button>}
