@@ -11,6 +11,7 @@
     "images:optimize": "node scripts/optimize-images.mjs"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.3.1",
     "@supabase/supabase-js": "^2.112.3",
     "@vitejs/plugin-react": "latest",
     "framer-motion": "latest",

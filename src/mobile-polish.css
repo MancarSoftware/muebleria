@@ -191,3 +191,14 @@
   .site-footer .footer-brand h2 { font-size: 37px; }
   .site-footer .footer-cta > p:not(.footer-label) { font-size: 27px; }
 }
+
+@media (max-width: 560px) {
+  .ar-modal { align-items: end; padding: 0; }
+  .ar-panel { width: 100%; max-height: 88vh; padding: 20px 6vw 24px; border-radius: 24px 24px 0 0; }
+  .ar-panel model-viewer { height: 48vh; min-height: 320px; }
+  .ar-camera-button { bottom: 14px; }
+  .ar-help { font-size: 11px; }
+  .admin-models > div:first-child { display: block; }
+  .admin-models > div:first-child p:last-child { margin-top: 8px; }
+  .admin-model-grid { grid-template-columns: 1fr; }
+}

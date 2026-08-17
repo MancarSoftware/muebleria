@@ -5,10 +5,11 @@ import type { InventoryStatus, Product, ProductColorVariant, ProductStatus } fro
 
 type ProductImageRow = { id: string; storage_path: string; alt_text: string | null; sort_order: number };
 type ProductVariantRow = { id: string; product_id: string; name: string; color_hex: string; image_storage_path: string | null; sort_order: number };
-type ProductRow = { id: string; slug: string; name: string; category: string; price: number; description: string; materials: string[]; dimensions: string; colors: string[]; tags: string[]; featured: boolean; status: ProductStatus; inventory_status: InventoryStatus; lead_time_days: number | null; sort_order: number; product_images?: ProductImageRow[] };
+type ProductRow = { id: string; slug: string; name: string; category: string; price: number; description: string; materials: string[]; dimensions: string; colors: string[]; tags: string[]; featured: boolean; status: ProductStatus; inventory_status: InventoryStatus; lead_time_days: number | null; sort_order: number; ar_model_storage_path?: string | null; ar_ios_model_storage_path?: string | null; product_images?: ProductImageRow[] };
 export type ProductDraft = Omit<Product, 'id' | 'images'> & { id?: string; images?: string[] };
 
 const bucket = 'product-images';
+const modelBucket = 'product-models';
 const emptyImage = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1200&q=85';
 
 function mapVariant(row: ProductVariantRow): ProductColorVariant {
@@ -18,7 +19,9 @@ function mapVariant(row: ProductVariantRow): ProductColorVariant {
 
 function mapProduct(row: ProductRow, variants: ProductColorVariant[] = []): Product {
   const images = (row.product_images ?? []).sort((a, b) => a.sort_order - b.sort_order).map((image) => supabase?.storage.from(bucket).getPublicUrl(image.storage_path).data.publicUrl).filter((url): url is string => Boolean(url));
-  return { id: row.id, slug: row.slug, name: row.name, category: row.category, price: Number(row.price), description: row.description, materials: row.materials ?? [], dimensions: row.dimensions, colors: row.colors ?? [], variants, tags: row.tags ?? [], featured: row.featured, status: row.status, inventoryStatus: row.inventory_status, leadTimeDays: row.lead_time_days, sortOrder: row.sort_order, images: images.length ? images : [emptyImage] };
+  const arModelUrl = row.ar_model_storage_path ? supabase?.storage.from(modelBucket).getPublicUrl(row.ar_model_storage_path).data.publicUrl : undefined;
+  const arIosModelUrl = row.ar_ios_model_storage_path ? supabase?.storage.from(modelBucket).getPublicUrl(row.ar_ios_model_storage_path).data.publicUrl : undefined;
+  return { id: row.id, slug: row.slug, name: row.name, category: row.category, price: Number(row.price), description: row.description, materials: row.materials ?? [], dimensions: row.dimensions, colors: row.colors ?? [], variants, tags: row.tags ?? [], featured: row.featured, status: row.status, inventoryStatus: row.inventory_status, leadTimeDays: row.lead_time_days, sortOrder: row.sort_order, arModelUrl, arModelStoragePath: row.ar_model_storage_path, arIosModelUrl, arIosModelStoragePath: row.ar_ios_model_storage_path, images: images.length ? images : [emptyImage] };
 }
 
 async function variantsByProduct(productIds: string[]) {
@@ -52,7 +55,13 @@ export async function getAdminProducts(): Promise<Product[]> {
   return mapProducts(data as ProductRow[]);
 }
 
-const toPayload = (product: ProductDraft) => ({ slug: product.slug.trim(), name: product.name.trim(), category: product.category, price: Number(product.price), description: product.description.trim(), materials: product.materials.map((value) => value.trim()).filter(Boolean), dimensions: product.dimensions.trim(), colors: product.colors.map((value) => value.trim()).filter(Boolean), tags: product.tags.map((value) => value.trim()).filter(Boolean), featured: product.featured, status: product.status ?? 'draft', inventory_status: product.inventoryStatus ?? 'made_to_order', lead_time_days: product.leadTimeDays ?? null, sort_order: product.sortOrder ?? 0 });
+const toPayload = (product: ProductDraft) => ({
+  slug: product.slug.trim(), name: product.name.trim(), category: product.category, price: Number(product.price), description: product.description.trim(), materials: product.materials.map((value) => value.trim()).filter(Boolean), dimensions: product.dimensions.trim(), colors: product.colors.map((value) => value.trim()).filter(Boolean), tags: product.tags.map((value) => value.trim()).filter(Boolean), featured: product.featured, status: product.status ?? 'draft', inventory_status: product.inventoryStatus ?? 'made_to_order', lead_time_days: product.leadTimeDays ?? null, sort_order: product.sortOrder ?? 0,
+  ...(product.arModelStoragePath !== undefined || product.arIosModelStoragePath !== undefined ? {
+    ar_model_storage_path: product.arModelStoragePath ?? null,
+    ar_ios_model_storage_path: product.arIosModelStoragePath ?? null,
+  } : {}),
+});
 
 export async function saveProduct(product: ProductDraft): Promise<string> {
   if (!supabase) throw new Error('Supabase is not configured.');
@@ -79,6 +88,52 @@ export async function uploadProductImages(productId: string, files: File[]) {
   const startingOrder = (currentImages[0]?.sort_order ?? -1) + 1;
   const { error } = await supabase.from('product_images').insert(paths.map((storage_path, index) => ({ product_id: productId, storage_path, sort_order: startingOrder + index })));
   if (error) throw error;
+}
+
+export type ArModelPlatform = 'android' | 'ios';
+
+const modelFileDetails: Record<ArModelPlatform, { extension: string; column: 'ar_model_storage_path' | 'ar_ios_model_storage_path'; label: string }> = {
+  android: { extension: 'glb', column: 'ar_model_storage_path', label: 'GLB para Android' },
+  ios: { extension: 'usdz', column: 'ar_ios_model_storage_path', label: 'USDZ para iPhone' },
+};
+
+function modelUploadError(platform: ArModelPlatform, file: File) {
+  const details = modelFileDetails[platform];
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (extension !== details.extension) throw new Error(`Selecciona un archivo .${details.extension.toUpperCase()} para ${details.label}.`);
+  if (file.size > 52_428_800) throw new Error('El modelo 3D supera el límite de 50 MB. Optimízalo antes de subirlo.');
+}
+
+export async function uploadProductArModel(productId: string, platform: ArModelPlatform, file: File, previousPath?: string | null) {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  modelUploadError(platform, file);
+  const details = modelFileDetails[platform];
+  const path = `${productId}/${platform}-${crypto.randomUUID()}.${details.extension}`;
+  const { error: uploadError } = await supabase.storage.from(modelBucket).upload(path, file, {
+    cacheControl: '31536000',
+    contentType: file.type || 'application/octet-stream',
+    upsert: false,
+  });
+  if (uploadError) throw uploadError;
+
+  const { error: updateError } = await supabase.from('products').update({ [details.column]: path }).eq('id', productId);
+  if (updateError) {
+    await supabase.storage.from(modelBucket).remove([path]);
+    throw updateError;
+  }
+  if (previousPath) await supabase.storage.from(modelBucket).remove([previousPath]);
+  return { storagePath: path, url: supabase.storage.from(modelBucket).getPublicUrl(path).data.publicUrl };
+}
+
+export async function removeProductArModel(productId: string, platform: ArModelPlatform, storagePath?: string | null) {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const details = modelFileDetails[platform];
+  const { error } = await supabase.from('products').update({ [details.column]: null }).eq('id', productId);
+  if (error) throw error;
+  if (storagePath) {
+    const { error: storageError } = await supabase.storage.from(modelBucket).remove([storagePath]);
+    if (storageError) throw storageError;
+  }
 }
 
 export async function saveProductVariants(productId: string, variants: ProductColorVariant[]) {
@@ -146,6 +201,13 @@ export async function deleteProduct(productId: string) {
   if (imagesError) throw imagesError;
   const paths = (images as Array<{ storage_path: string }>).map(({ storage_path }) => storage_path);
   if (paths.length) { const { error } = await supabase.storage.from(bucket).remove(paths); if (error) throw error; }
+  const { data: modelRow, error: modelError } = await supabase.from('products').select('ar_model_storage_path, ar_ios_model_storage_path').eq('id', productId).maybeSingle();
+  if (modelError && modelError.code !== '42703') throw modelError;
+  const modelPaths = modelError ? [] : [
+    (modelRow as { ar_model_storage_path?: string | null; ar_ios_model_storage_path?: string | null } | null)?.ar_model_storage_path,
+    (modelRow as { ar_model_storage_path?: string | null; ar_ios_model_storage_path?: string | null } | null)?.ar_ios_model_storage_path,
+  ].filter((path): path is string => Boolean(path));
+  if (modelPaths.length) { const { error } = await supabase.storage.from(modelBucket).remove(modelPaths); if (error) throw error; }
   const { error } = await supabase.from('products').delete().eq('id', productId);
   if (error) throw error;
 }

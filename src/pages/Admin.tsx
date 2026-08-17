@@ -1,11 +1,11 @@
-import { Activity, ArrowLeft, Check, ClipboardList, DatabaseZap, Eye, ImagePlus, LoaderCircle, LogOut, MousePointerClick, PackagePlus, Pencil, Plus, RefreshCw, Trash2, UploadCloud, Users, X } from 'lucide-react';
+import { Activity, ArrowLeft, Box, Check, ClipboardList, DatabaseZap, Eye, ImagePlus, LoaderCircle, LogOut, MousePointerClick, PackagePlus, Pencil, Plus, RefreshCw, Trash2, UploadCloud, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LeadInbox } from '../components/LeadInbox';
 import { legacyColorVariants } from '../lib/colorVariants';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { getRealtimeAnalytics, type AnalyticsDashboardError, type RealtimeAnalytics } from '../services/analyticsDashboard';
-import { deleteProduct, getAdminProducts, removeProductImage, saveProduct, saveProductVariants, seedDemoCatalog, type ProductDraft, uploadProductImages, uploadProductVariantImage } from '../services/catalog';
+import { deleteProduct, getAdminProducts, removeProductArModel, removeProductImage, saveProduct, saveProductVariants, seedDemoCatalog, type ArModelPlatform, type ProductDraft, uploadProductArModel, uploadProductImages, uploadProductVariantImage } from '../services/catalog';
 import { catalogCategories, type InventoryStatus, type Product, type ProductColorVariant, type ProductStatus } from '../types/catalog';
 
 type Profile = { role: 'admin' | 'editor'; display_name: string | null };
@@ -33,13 +33,15 @@ const listValue = (value: string) => value.split(',').map((item) => item.trim())
 const toSlug = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-EC').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const newVariant = (sortOrder: number): ProductColorVariant => ({ id: crypto.randomUUID(), name: `Color ${sortOrder + 1}`, hex: '#D6C4A5', sortOrder });
 
-const errorMessage = (error: unknown, action: 'save' | 'image' | 'seed') => {
+const errorMessage = (error: unknown, action: 'save' | 'image' | 'model' | 'seed') => {
   const detail = error as { code?: string; message?: string };
   if (detail.code === '23505') return 'Ya existe una pieza con esa URL. Cambia el campo “URL del producto” y vuelve a guardar.';
   if (detail.code === '42501') return 'Tu cuenta no tiene permiso para esta acción. Verifica que tenga rol admin o editor en Supabase.';
   if (detail.code === '42P01') return 'Falta activar las variantes de color en Supabase. Ejecuta la migración 202608120002_product_color_variants.sql y vuelve a guardar.';
+  if (detail.code === '42703') return 'Falta activar los modelos 3D en Supabase. Ejecuta la migración 202608120010_product_ar_models.sql y vuelve a intentarlo.';
   if (detail.message?.toLowerCase().includes('file size')) return 'La imagen supera el límite de 10 MB. Reduce su tamaño e inténtalo de nuevo.';
   if (action === 'image') return 'La pieza se guardó, pero no pudimos subir una de las imágenes. Prueba con JPG, PNG o WebP de menos de 10 MB.';
+  if (action === 'model') return detail.message || 'La pieza se guardó, pero no pudimos cargar el modelo 3D. Usa GLB para Android o USDZ para iPhone, de hasta 50 MB.';
   if (action === 'seed') return 'No pudimos cargar las piezas de demostración. Revisa los permisos de Supabase y vuelve a intentarlo.';
   return 'No pudimos guardar el producto. Inténtalo de nuevo o revisa los permisos de Supabase.';
 };
@@ -55,6 +57,7 @@ export function Admin() {
   const [selected, setSelected] = useState<ProductDraft>(blankProduct());
   const [files, setFiles] = useState<File[]>([]);
   const [variantFiles, setVariantFiles] = useState<Record<string, File>>({});
+  const [modelFiles, setModelFiles] = useState<Partial<Record<ArModelPlatform, File>>>({});
   const [loading, setLoading] = useState(false);
   const [analytics, setAnalytics] = useState<RealtimeAnalytics | null>(null);
   const [analyticsStatus, setAnalyticsStatus] = useState<AnalyticsStatus>('loading');
@@ -135,8 +138,8 @@ export function Admin() {
 
   const update = (next: Partial<ProductDraft>) => setSelected((current) => ({ ...current, ...next }));
   const updateVariants = (variants: ProductColorVariant[]) => update({ variants, colors: variants.map((variant) => variant.name) });
-  const selectProduct = (product: Product) => { setSelected(toDraft(product)); setFiles([]); setVariantFiles({}); setNotice(''); };
-  const createProduct = () => { setSelected(blankProduct()); setFiles([]); setVariantFiles({}); setNotice(''); };
+  const selectProduct = (product: Product) => { setSelected(toDraft(product)); setFiles([]); setVariantFiles({}); setModelFiles({}); setNotice(''); };
+  const createProduct = () => { setSelected(blankProduct()); setFiles([]); setVariantFiles({}); setModelFiles({}); setNotice(''); };
 
   const seedCatalog = async () => {
     setLoading(true); setNotice('');
@@ -182,10 +185,21 @@ export function Admin() {
         return;
       }
 
+      try {
+        if (modelFiles.android) await uploadProductArModel(id, 'android', modelFiles.android, selected.arModelStoragePath);
+        if (modelFiles.ios) await uploadProductArModel(id, 'ios', modelFiles.ios, selected.arIosModelStoragePath);
+      } catch (error) {
+        const nextProducts = await loadProducts();
+        const savedProduct = nextProducts.find((product) => product.id === id);
+        setSelected(savedProduct ? toDraft(savedProduct) : (current) => ({ ...current, id, variants: nextVariants }));
+        setFiles([]); setVariantFiles({}); setModelFiles({}); setNotice(errorMessage(error, 'model'));
+        return;
+      }
+
       const nextProducts = await loadProducts();
       const savedProduct = nextProducts.find((product) => product.id === id);
       setSelected(savedProduct ? toDraft(savedProduct) : (current) => ({ ...current, id, variants: nextVariants }));
-      setFiles([]); setVariantFiles({});
+      setFiles([]); setVariantFiles({}); setModelFiles({});
       setNotice(selected.status === 'published' ? 'Producto publicado. Ya aparece en el catálogo público.' : 'Borrador guardado. Solo tú puedes verlo aquí.');
     } catch (error) {
       setNotice(errorMessage(error, 'save'));
@@ -201,6 +215,20 @@ export function Admin() {
       const refreshedProduct = nextProducts.find((product) => product.id === selectedId);
       setSelected(refreshedProduct ? toDraft(refreshedProduct) : (current) => ({ ...current, images: current.images?.filter((image) => image !== imageUrl) }));
     } catch { setNotice('No pudimos eliminar la imagen.'); }
+    finally { setLoading(false); }
+  };
+
+  const removeModel = async (platform: ArModelPlatform) => {
+    if (!selectedId) return;
+    const path = platform === 'android' ? selected.arModelStoragePath : selected.arIosModelStoragePath;
+    if (!path || !window.confirm(`¿Eliminar el modelo ${platform === 'android' ? 'GLB' : 'USDZ'} de “${selected.name}”?`)) return;
+    setLoading(true);
+    try {
+      await removeProductArModel(selectedId, platform, path);
+      const nextProducts = await loadProducts();
+      const refreshedProduct = nextProducts.find((product) => product.id === selectedId);
+      setSelected(refreshedProduct ? toDraft(refreshedProduct) : (current) => ({ ...current, ...(platform === 'android' ? { arModelStoragePath: null, arModelUrl: undefined } : { arIosModelStoragePath: null, arIosModelUrl: undefined }) }));
+    } catch (error) { setNotice(errorMessage(error, 'model')); }
     finally { setLoading(false); }
   };
 
@@ -230,7 +258,7 @@ export function Admin() {
         <p className="eyebrow">TU CATÁLOGO · {products.length}</p>
         {products.map((product) => <button className={`admin-product ${selectedId === product.id ? 'selected' : ''}`} type="button" key={product.id} onClick={() => selectProduct(product)}><img src={product.images[0]} alt=""/><span><b>{product.name}</b><small>{product.status === 'published' ? 'Publicado' : 'Borrador'} · ${product.price.toLocaleString('en-US')}</small></span><Pencil/></button>)}
       </aside>
-      <ProductEditor product={selected} files={files} variantFiles={variantFiles} notice={notice} loading={loading} onChange={update} onFiles={setFiles} onVariants={updateVariants} onVariantFiles={setVariantFiles} onSubmit={submit} onDelete={remove} onRemoveImage={removeImage}/>
+      <ProductEditor product={selected} files={files} variantFiles={variantFiles} modelFiles={modelFiles} notice={notice} loading={loading} onChange={update} onFiles={setFiles} onVariants={updateVariants} onVariantFiles={setVariantFiles} onModelFiles={setModelFiles} onSubmit={submit} onDelete={remove} onRemoveImage={removeImage} onRemoveModel={removeModel}/>
     </div>
     <LeadInbox/>
   </main>;
@@ -278,7 +306,7 @@ function AdminLogin({ email, password, notice, loading, onEmail, onPassword, onS
   return <main className="admin-shell admin-login"><Link className="brand" to="/"><i>CN</i><span>Casa Nativa</span></Link><form onSubmit={onSubmit}><p className="eyebrow">ACCESO DE PROPIETARIO</p><h1>Gestiona tus<br/><em>piezas.</em></h1><label>Correo<input type="email" value={email} onChange={(event) => onEmail(event.target.value)} autoComplete="email" required/></label><label>Contraseña<input type="password" value={password} onChange={(event) => onPassword(event.target.value)} autoComplete="current-password" required/></label>{notice && <p className="admin-notice error">{notice}</p>}<button className="dark-button" disabled={loading}>{loading ? <LoaderCircle className="spin"/> : 'Entrar al catálogo'}</button><small>Solo usuarios autorizados por el propietario pueden administrar el catálogo.</small></form></main>;
 }
 
-function ProductEditor({ product, files, variantFiles, notice, loading, onChange, onFiles, onVariants, onVariantFiles, onSubmit, onDelete, onRemoveImage }: { product: ProductDraft; files: File[]; variantFiles: Record<string, File>; notice: string; loading: boolean; onChange: (next: Partial<ProductDraft>) => void; onFiles: (files: File[]) => void; onVariants: (variants: ProductColorVariant[]) => void; onVariantFiles: (files: Record<string, File>) => void; onSubmit: (event: React.FormEvent) => void; onDelete: () => void; onRemoveImage: (imageUrl: string) => void }) {
+function ProductEditor({ product, files, variantFiles, modelFiles, notice, loading, onChange, onFiles, onVariants, onVariantFiles, onModelFiles, onSubmit, onDelete, onRemoveImage, onRemoveModel }: { product: ProductDraft; files: File[]; variantFiles: Record<string, File>; modelFiles: Partial<Record<ArModelPlatform, File>>; notice: string; loading: boolean; onChange: (next: Partial<ProductDraft>) => void; onFiles: (files: File[]) => void; onVariants: (variants: ProductColorVariant[]) => void; onVariantFiles: (files: Record<string, File>) => void; onModelFiles: (files: Partial<Record<ArModelPlatform, File>>) => void; onSubmit: (event: React.FormEvent) => void; onDelete: () => void; onRemoveImage: (imageUrl: string) => void; onRemoveModel: (platform: ArModelPlatform) => void }) {
   return <section className="admin-editor"><form onSubmit={onSubmit}>
     <div className="admin-editor-head"><div><p className="eyebrow">{product.id ? 'EDITAR PRODUCTO' : 'NUEVO PRODUCTO'}</p><h2>{product.name || 'Sin nombre todavía'}</h2></div><select value={product.status ?? 'draft'} onChange={(event) => onChange({ status: event.target.value as ProductStatus })}><option value="draft">Borrador</option><option value="published">Publicado</option></select></div>
     <div className="admin-form-grid">
@@ -297,6 +325,7 @@ function ProductEditor({ product, files, variantFiles, notice, loading, onChange
     </div>
     <VariantManager variants={product.variants ?? []} files={variantFiles} disabled={loading} onChange={onVariants} onFiles={onVariantFiles}/>
     <ImageManager images={product.images ?? []} files={files} disabled={loading} onFiles={onFiles} onRemove={onRemoveImage}/>
+    <ModelManager product={product} files={modelFiles} disabled={loading} onFiles={onModelFiles} onRemove={onRemoveModel}/>
     {notice && <p className={`admin-notice ${notice.startsWith('Producto') || notice.startsWith('Borrador') ? '' : 'error'}`}>{notice}</p>}
     <div className="admin-actions"><button className="dark-button" disabled={loading}>{loading ? <LoaderCircle className="spin"/> : product.status === 'published' ? <><Check/> Guardar y publicar</> : 'Guardar borrador'}</button>{product.id && <button className="admin-delete" type="button" onClick={onDelete} disabled={loading}><Trash2/> Eliminar producto</button>}</div>
   </form></section>;
@@ -311,4 +340,12 @@ function VariantManager({ variants, files, disabled, onChange, onFiles }: { vari
 function ImageManager({ images, files, disabled, onFiles, onRemove }: { images: string[]; files: File[]; disabled: boolean; onFiles: (files: File[]) => void; onRemove: (imageUrl: string) => void }) {
   const previews = files.map((file) => ({ name: file.name, url: URL.createObjectURL(file) }));
   return <section className="admin-images"><div><p className="eyebrow">FOTOGRAFÍAS GENERALES</p><p>JPG, PNG o WebP · máximo 10 MB por imagen.</p></div><label className="admin-upload"><ImagePlus/><span>Añadir imágenes<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={disabled} onChange={(event) => onFiles([...files, ...Array.from(event.target.files ?? [])])}/></span></label><div className="admin-image-grid">{images.map((image) => <figure key={image}><img src={image} alt=""/><button type="button" disabled={disabled} onClick={() => onRemove(image)} aria-label="Eliminar imagen"><Trash2/></button></figure>)}{previews.map((image) => <figure key={image.name} className="pending"><img src={image.url} alt=""/><span><UploadCloud/> Se subirá al guardar</span></figure>)}</div></section>;
+}
+
+function ModelManager({ product, files, disabled, onFiles, onRemove }: { product: ProductDraft; files: Partial<Record<ArModelPlatform, File>>; disabled: boolean; onFiles: (files: Partial<Record<ArModelPlatform, File>>) => void; onRemove: (platform: ArModelPlatform) => void }) {
+  const slots: Array<{ platform: ArModelPlatform; title: string; extension: string; file: File | undefined; stored: boolean }> = [
+    { platform: 'android', title: 'Android y web', extension: '.glb', file: files.android, stored: Boolean(product.arModelStoragePath) },
+    { platform: 'ios', title: 'iPhone y iPad', extension: '.usdz', file: files.ios, stored: Boolean(product.arIosModelStoragePath) },
+  ];
+  return <section className="admin-models"><div><p className="eyebrow">REALIDAD AUMENTADA</p><p>Sube modelos a escala real: GLB para Android/Web y USDZ para iPhone. Máximo 50 MB por archivo.</p></div><div className="admin-model-grid">{slots.map(({ platform, title, extension, file, stored }) => <article key={platform}><Box/><div><b>{title}</b><small>{file ? `${file.name} · se subirá al guardar` : stored ? `Modelo ${extension} cargado` : `Sin modelo ${extension}`}</small></div><label className="admin-model-upload"><span>{file || stored ? 'Reemplazar' : 'Subir modelo'}<input type="file" accept={extension} disabled={disabled} onChange={(event) => { const nextFile = event.target.files?.[0]; if (nextFile) onFiles({ ...files, [platform]: nextFile }); }}/></span></label>{stored && !file && <button type="button" className="admin-model-remove" disabled={disabled} onClick={() => onRemove(platform)} aria-label={`Eliminar modelo ${extension}`}><Trash2/></button>}</article>)}</div><small className="admin-model-note">El botón “Ver en mi espacio” se habilita automáticamente en la ficha pública cuando exista el modelo GLB. En iPhone se recomienda cargar también USDZ.</small></section>;
 }
