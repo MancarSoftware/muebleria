@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, Clock3, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, Check, Clock3, Mail, MapPin, Menu, MessageCircle, Phone, Sparkles, Star, X } from 'lucide-react';
 import heroImage from '../assets/hero-showroom.webp';
 import sofaImage from '../assets/products/sofa-olmo-editorial.webp';
 import tableImage from '../assets/products/mesa-aura-editorial.webp';
@@ -9,20 +9,18 @@ import chairImage from '../assets/products/silla-cedro-editorial.webp';
 import { business, whatsappLink } from '../config/business';
 import { trackEvent } from '../lib/analytics';
 
+const navigation = [['Propuesta', '#propuesta'], ['Servicios', '#servicios'], ['Espacios', '#espacios'], ['Visítanos', '#visita']];
 const services = [
-  ['01', 'Piezas con intención', 'Muebles de líneas cálidas y materiales que acompañan la vida diaria.'],
-  ['02', 'Asesoría para tu espacio', 'Te ayudamos a elegir escala, composición y piezas que dialoguen entre sí.'],
-  ['03', 'Visita al showroom', 'Ven, toca los acabados y entiende cada pieza antes de decidir.'],
+  ['01', 'Curamos contigo', 'No tienes que saber de diseño. Partimos de cómo quieres vivir.'],
+  ['02', 'Lo hacemos encajar', 'Escala, materiales y combinaciones que sí funcionan en tu espacio.'],
+  ['03', 'Lo pruebas en persona', 'Toca, compara y decide con calma en nuestro showroom.'],
 ];
-
-const gallery = [
-  { src: sofaImage, alt: 'Sofá en una sala luminosa', label: 'Sala' },
-  { src: tableImage, alt: 'Mesa de comedor de madera', label: 'Comedor' },
-  { src: bedImage, alt: 'Cama en dormitorio sereno', label: 'Dormitorio' },
-  { src: chairImage, alt: 'Silla de madera clara', label: 'Detalles' },
+const rooms = [
+  { image: sofaImage, name: 'Sala lenta', caption: 'Conversar, recostarse, quedarse.' },
+  { image: tableImage, name: 'Comedor vivo', caption: 'El lugar donde pasan las cosas.' },
+  { image: bedImage, name: 'Dormitorio suave', caption: 'Bajar el ritmo también es habitar.' },
+  { image: chairImage, name: 'Pequeños gestos', caption: 'Las piezas que hacen el resto.' },
 ];
-
-const navigation = [['La propuesta', '#propuesta'], ['Cómo trabajamos', '#proceso'], ['Espacios', '#espacios'], ['Contacto', '#contacto']];
 
 export function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -30,11 +28,11 @@ export function Landing() {
 
   const submitInquiry = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const name = String(data.get('name') ?? '').trim();
-    const phone = String(data.get('phone') ?? '').trim();
-    const space = String(data.get('space') ?? '').trim();
-    const details = String(data.get('details') ?? '').trim();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get('name') ?? '').trim();
+    const phone = String(form.get('phone') ?? '').trim();
+    const space = String(form.get('space') ?? '').trim();
+    const details = String(form.get('details') ?? '').trim();
     const message = `Hola, soy ${name}. Quiero conversar sobre ${space || 'mi espacio'}${phone ? `. Mi teléfono es ${phone}` : ''}${details ? `. ${details}` : ''}`;
     trackEvent('contact_whatsapp', { location: 'landing_form', room_type: space || undefined });
     window.open(whatsappLink(message), '_blank', 'noopener,noreferrer');
@@ -49,30 +47,37 @@ export function Landing() {
       <button className="landing-menu-toggle" type="button" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X/> : <Menu/>}</button>
     </header>
 
-    {menuOpen && <motion.nav className="landing-mobile-menu" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} aria-label="Navegación móvil">{navigation.map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>)}<a href={whatsappLink('Hola, quiero conocer Casa Nativa.')} onClick={() => { trackEvent('contact_whatsapp', { location: 'landing_mobile_menu' }); setMenuOpen(false); }} target="_blank" rel="noreferrer">Escribir por WhatsApp <ArrowRight/></a></motion.nav>}
+    {menuOpen && <motion.nav className="landing-mobile-menu" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} aria-label="Navegación móvil">{navigation.map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}<ArrowRight/></a>)}<a className="landing-menu-whatsapp" href={whatsappLink('Hola, quiero conocer Casa Nativa.')} onClick={() => { trackEvent('contact_whatsapp', { location: 'landing_mobile_menu' }); setMenuOpen(false); }} target="_blank" rel="noreferrer">Escribir por WhatsApp <ArrowRight/></a></motion.nav>}
 
     <main>
       <section className="landing-hero" id="inicio">
         <div className="landing-hero-copy">
-          <motion.p className="landing-kicker" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5 }}>MUEBLES · ASESORÍA · QUITO</motion.p>
-          <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65, delay: .08 }}>Tu espacio<br/>merece sentirse<br/><em>como tú.</em></motion.h1>
-          <motion.p className="landing-lead" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65, delay: .16 }}>Piezas honestas y asesoría cercana para habitar con más calma, intención y sentido.</motion.p>
-          <motion.div className="landing-hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65, delay: .24 }}><a className="landing-primary-button" href="#contacto">Cuéntanos tu idea <ArrowRight/></a><a className="landing-text-link" href="#propuesta">Conocer la propuesta <ArrowDownRight/></a></motion.div>
+          <motion.p className="landing-kicker" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>SHOWROOM · QUITO · ECUADOR</motion.p>
+          <motion.h1 initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .6, delay: .06 }}>Muebles para<br/><em>vivir mejor,</em><br/>no para llenar.</motion.h1>
+          <motion.p className="landing-hero-lead" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .16 }}>Piezas con carácter y ayuda real para crear un espacio que se sienta totalmente tuyo.</motion.p>
+          <motion.div className="landing-hero-actions" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .25 }}><a className="landing-primary-button" href="#contacto">Hablemos de tu espacio <ArrowRight/></a><a className="landing-secondary-button" href="#espacios">Explorar ambientes <ArrowDownRight/></a></motion.div>
         </div>
-        <div className="landing-hero-image"><img src={heroImage} alt="Interior cálido con muebles Casa Nativa"/><div className="landing-image-note"><span>Casa Nativa</span><span>Quito · 2026</span></div></div>
+        <motion.div className="landing-hero-collage" initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .75, delay: .1 }}>
+          <div className="landing-hero-main-photo"><img src={heroImage} alt="Sala cálida de Casa Nativa"/><span>CASA NATIVA<br/>DESDE QUITO</span></div>
+          <div className="landing-hero-mini-photo"><img src={chairImage} alt="Silla de madera clara"/></div>
+          <div className="landing-hero-badge"><Sparkles/><b>Sin fórmulas<br/>prefabricadas.</b><small>Tu casa, tu ritmo.</small></div>
+          <div className="landing-hero-orbit">HECHO PARA HABITAR · HECHO PARA HABITAR ·</div>
+        </motion.div>
       </section>
 
-      <section className="landing-intro" id="propuesta"><p className="landing-kicker">UNA FORMA MÁS PERSONAL DE ELEGIR</p><div><h2>No se trata de llenar una casa.<br/>Se trata de <em>hacerle lugar a tu vida.</em></h2><p>Casa Nativa selecciona piezas con presencia y te acompaña a encontrar las que realmente funcionen para tu ritmo, tus medidas y tu manera de estar.</p></div></section>
+      <div className="landing-marquee" aria-hidden="true"><div>CASA NATIVA <Star/> MUEBLES CON ALMA <Star/> ESPACIOS CON INTENCIÓN <Star/> CASA NATIVA <Star/> MUEBLES CON ALMA <Star/> ESPACIOS CON INTENCIÓN <Star/></div></div>
 
-      <section className="landing-services" id="proceso"><div className="landing-section-heading"><p className="landing-kicker">CÓMO PODEMOS AYUDARTE</p><h2>Elegir no tiene por qué ser <em>complicado.</em></h2></div><div className="landing-service-list">{services.map(([number, title, description], index) => <motion.article key={number} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .3 }} transition={{ duration: .5, delay: index * .08 }}><span>{number}</span><div><h3>{title}</h3><p>{description}</p></div><ArrowDownRight/></motion.article>)}</div></section>
+      <section className="landing-intro" id="propuesta"><div className="landing-intro-marker">01 <span>LA IDEA</span></div><div className="landing-intro-content"><p className="landing-kicker">NO HAY DOS CASAS IGUALES</p><h2>Tu casa no necesita más cosas.<br/>Necesita <em>las correctas.</em></h2><p>Te acompañamos desde la primera idea hasta ese momento en que una pieza se siente exactamente donde debe estar.</p><div className="landing-intro-list"><span><Check/> Materiales que se disfrutan</span><span><Check/> Medidas que tienen sentido</span><span><Check/> Acompañamiento cercano</span></div></div></section>
 
-      <section className="landing-gallery" id="espacios"><div className="landing-section-heading"><p className="landing-kicker">ESPACIOS PARA QUEDARSE</p><h2>Una casa con <em>ritmo propio.</em></h2></div><div className="landing-gallery-grid">{gallery.map((item, index) => <motion.figure key={item.label} className={`landing-gallery-card gallery-card-${index + 1}`} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .2 }} transition={{ duration: .55, delay: index * .06 }}><img src={item.src} alt={item.alt}/><figcaption>{item.label}<ArrowUpRight/></figcaption></motion.figure>)}</div></section>
+      <section className="landing-services" id="servicios"><div className="landing-services-heading"><p className="landing-kicker">UNA EXPERIENCIA SIN PRESIÓN</p><h2>De “me gusta” a <em>“es perfecto aquí.”</em></h2><p>No se trata de venderte más. Se trata de ayudarte a decidir bien.</p></div><div className="landing-service-grid">{services.map(([number, title, description], index) => <motion.article key={number} initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .2 }} transition={{ duration: .45, delay: index * .08 }}><span>{number}</span><ArrowDownRight/><h3>{title}</h3><p>{description}</p></motion.article>)}</div></section>
 
-      <section className="landing-visit"><div className="landing-visit-image"><img src={tableImage} alt="Mesa Casa Nativa en un comedor"/></div><div className="landing-visit-copy"><p className="landing-kicker">VEN A CONOCER LAS PIEZAS</p><h2>La textura, la escala y la comodidad se entienden mejor <em>en persona.</em></h2><div className="landing-contact-details"><a href={business.mapsUrl} target="_blank" rel="noreferrer"><MapPin/>{business.address}</a><span><Clock3/>{business.hours}</span></div><a className="landing-outline-button" href={business.mapsUrl} target="_blank" rel="noreferrer">Ver ubicación <ArrowRight/></a></div></section>
+      <section className="landing-rooms" id="espacios"><div className="landing-rooms-heading"><div><p className="landing-kicker">INSPIRACIÓN PARA EMPEZAR</p><h2>Así se ve<br/><em>sentirse en casa.</em></h2></div><p>Cada ambiente tiene una energía. Encuentra la que se parece a la tuya.</p></div><div className="landing-rooms-grid">{rooms.map((room, index) => <motion.figure className={`landing-room landing-room-${index + 1}`} key={room.name} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .2 }} transition={{ duration: .5, delay: index * .06 }}><img src={room.image} alt={room.name}/><figcaption><small>0{index + 1} · {room.caption}</small><span>{room.name}<ArrowRight/></span></figcaption></motion.figure>)}</div></section>
 
-      <section className="landing-contact" id="contacto"><div className="landing-contact-copy"><p className="landing-kicker">HABLEMOS DE TU ESPACIO</p><h2>Una conversación puede cambiar <em>la casa.</em></h2><p>No necesitas tener todo decidido. Cuéntanos qué quieres resolver y empezamos por ahí.</p><div><a href={`tel:${business.phone}`}><Phone/>{business.phone}</a><a href={`mailto:${business.email}`}><Mail/>{business.email}</a></div></div><form className="landing-form" onSubmit={submitInquiry}><label>Tu nombre<input name="name" required autoComplete="name" placeholder="Cómo te llamas"/></label><label>Tu WhatsApp<input name="phone" type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} title="Ingresa un teléfono ecuatoriano de 10 dígitos" placeholder="0986951419"/></label><label>¿Qué te gustaría resolver?<select name="space" defaultValue=""><option value="" disabled>Elige una opción</option><option>Sala</option><option>Comedor</option><option>Dormitorio</option><option>Oficina</option><option>Todo mi espacio</option></select></label><label>Cuéntanos un poco más<textarea name="details" placeholder="Piezas que buscas, medidas aproximadas o estilo que te gusta…"/></label><button className="landing-primary-button" type="submit">Enviar por WhatsApp <ArrowRight/></button>{submitted && <p className="landing-form-success"><Check/> Abrimos WhatsApp con tu mensaje preparado.</p>}</form></section>
+      <section className="landing-visit" id="visita"><div className="landing-visit-copy"><p className="landing-kicker">VEN A PROBAR LAS PIEZAS</p><h2>Una foto inspira.<br/>Pero tocarlo lo <em>cambia todo.</em></h2><p>El showroom es para sentarte, comparar acabados y descubrir qué funciona contigo.</p><div className="landing-contact-details"><a href={business.mapsUrl} target="_blank" rel="noreferrer"><MapPin/>{business.address}</a><span><Clock3/>{business.hours}</span></div><a className="landing-light-button" href={business.mapsUrl} target="_blank" rel="noreferrer">Cómo llegar <ArrowRight/></a></div><div className="landing-visit-visual"><img src={tableImage} alt="Mesa de comedor Casa Nativa"/><div><span>TOCA</span><span>SIÉNTATE</span><span>ELIGE</span></div></div></section>
+
+      <section className="landing-contact" id="contacto"><div className="landing-contact-copy"><p className="landing-kicker">EMPECEMOS POR UNA CONVERSACIÓN</p><h2>Tu próximo<br/>espacio empieza<br/><em>con un mensaje.</em></h2><p>Cuéntanos lo que estás imaginando. No hace falta tener las respuestas todavía.</p><div className="landing-contact-links"><a href={`tel:${business.phone}`}><Phone/>{business.phone}</a><a href={`mailto:${business.email}`}><Mail/>{business.email}</a></div></div><form className="landing-form" onSubmit={submitInquiry}><div className="landing-form-header"><span>HOLA <Sparkles/></span><p>¿Qué te gustaría transformar?</p></div><label>Tu nombre<input name="name" required autoComplete="name" placeholder="Cómo te llamas"/></label><label>Tu WhatsApp<input name="phone" type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} title="Ingresa un teléfono ecuatoriano de 10 dígitos" placeholder="0986951419"/></label><label>El espacio<select name="space" defaultValue=""><option value="" disabled>Elige una opción</option><option>Sala</option><option>Comedor</option><option>Dormitorio</option><option>Oficina</option><option>Todo mi espacio</option></select></label><label>Tu idea<textarea name="details" placeholder="Piezas que buscas, medidas o la sensación que quieres lograr…"/></label><button className="landing-primary-button" type="submit">Enviar por WhatsApp <ArrowRight/></button>{submitted && <p className="landing-form-success"><Check/> Abrimos WhatsApp con tu mensaje preparado.</p>}</form></section>
     </main>
 
-    <footer className="landing-footer"><a className="landing-brand" href="#inicio"><span>CN</span>{business.name}</a><p>Muebles que dejan espacio para <em>vivir.</em></p><div><span>Quito, Ecuador</span><a href={whatsappLink('Hola, quiero conocer Casa Nativa.')} onClick={() => trackEvent('contact_whatsapp', { location: 'landing_footer' })} target="_blank" rel="noreferrer">Hablar por WhatsApp <ArrowRight/></a></div><small>© {new Date().getFullYear()} {business.name}. Todos los derechos reservados.</small></footer>
+    <footer className="landing-footer"><a className="landing-brand" href="#inicio"><span>CN</span>{business.name}</a><p>Una casa que se siente <em>como tú.</em></p><div><span>Quito, Ecuador</span><a href={whatsappLink('Hola, quiero conocer Casa Nativa.')} onClick={() => trackEvent('contact_whatsapp', { location: 'landing_footer' })} target="_blank" rel="noreferrer">Hablar por WhatsApp <ArrowRight/></a></div><small>© {new Date().getFullYear()} {business.name}. Todos los derechos reservados.</small></footer>
   </div>;
 }
