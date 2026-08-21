@@ -7,20 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "images:optimize": "node scripts/optimize-images.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.3",
     "@vitejs/plugin-react": "latest",
     "framer-motion": "latest",
     "lucide-react": "latest",
-    "openai": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "react-router-dom": "latest",
-    "simple-icons": "^16.28.0",
-    "swiper": "latest",
     "typescript": "latest",
     "vite": "latest"
   },
@@ -29,7 +23,6 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "eslint": "latest",
-    "sharp": "^0.35.3",
     "typescript-eslint": "latest"
   }
 }
