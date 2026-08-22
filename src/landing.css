@@ -48,6 +48,6 @@ button, input, textarea, select { font: inherit; }
 .sales-intro-card { align-items: stretch; justify-content: flex-end; text-align: left; }
 .sales-intro-card::after { background: linear-gradient(180deg, transparent 38%, #0b120ab0 100%); }
 .sales-intro-card > div { width: min(84%, 350px); gap: 13px; justify-items: start; padding: 0; background: transparent; text-align: left; }
-.sales-intro-card p { font-size: clamp(29px, 2.65vw, 40px); text-shadow: 0 3px 16px #081008d9; }
+.sales-intro-card p { color: rgb(255 255 255 / .1); font-size: clamp(29px, 2.65vw, 40px); -webkit-text-fill-color: transparent; -webkit-text-stroke: 1px rgb(255 255 255 / .88); text-shadow: 0 3px 16px #081008d9; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
